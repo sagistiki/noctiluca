@@ -189,6 +189,17 @@ docs/brand/      the icon and banners as SVG/HTML, rendered by render.sh
 
 Rust 2024 · [wgpu](https://wgpu.rs) on Metal · [egui](https://github.com/emilk/egui) · cpal · rustfft · VideoToolbox. About 290 tests: `cargo test --release`.
 
+## `11` · Roadmap
+
+- [ ] **Look editor**: build your own looks inside the app. Make new themes from the backgrounds, patterns, objects, atmospheres, effects and palettes; bring in your own images, 3D models (glTF) and templates; tune how each one reacts to the kick, the build and the drop; save them and hand them to the director.
+- [ ] **A much bigger library**: new themes, backgrounds, patterns, 3D objects, atmospheres, effects and palettes, from clean and minimal to luxurious to heavy FX.
+- [ ] **MIDI controllers** with Learn: any pad, knob or fader to any action.
+- [ ] **3D stage**: plan the room (walls, screens, projectors, lights) in 3D before the gig.
+- [ ] **Clips and logos**: your own videos, logos and text over the show.
+- [ ] **Bigger rigs**: more projectors and network screens, ready in a few clicks.
+- [ ] **Show safety**: autosave, a panic button, and a health view of every output.
+- [ ] **Gig setup wizard**: from a new room to a running show, step by step.
+
 ## License
 
 [MIT](LICENSE). The Inter font is under the SIL Open Font License ([assets/fonts/Inter-LICENSE.txt](assets/fonts/Inter-LICENSE.txt)).
