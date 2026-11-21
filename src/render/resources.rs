@@ -7,12 +7,22 @@
 use std::path::{Path, PathBuf};
 
 /// The folder `name` (such as "shaders") inside the app the program runs
-/// from, or else `fallback`.
-pub fn find(name: &str, fallback: PathBuf) -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| inside_app(&exe, name))
-        .unwrap_or(fallback)
+/// from, or else `in_project` (such as "assets/models") in the project.
+pub fn find(name: &str, in_project: &str) -> PathBuf {
+    let exe = std::env::current_exe().ok();
+    exe.as_deref()
+        .and_then(|exe| inside_app(exe, name))
+        .or_else(|| Some(project_dir()?.join(in_project)))
+        .unwrap_or_else(|| PathBuf::from(in_project))
+}
+
+/// The project folder, for a program run with cargo from target/: the
+/// nearest folder above the program with a Cargo.toml. Found at run time
+/// rather than written into the program, so a build carries no path of
+/// the computer it was built on.
+pub fn project_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    exe.ancestors().skip(1).take(10).find(|d| d.join("Cargo.toml").is_file()).map(Path::to_path_buf)
 }
 
 /// For a program at App.app/Contents/MacOS/program, the folder
@@ -49,7 +59,9 @@ mod tests {
     #[test]
     fn outside_an_app_the_project_folders_are_used() {
         // Tests run from target/, which is not inside an app.
-        let fallback = PathBuf::from("/the/project/shaders");
-        assert_eq!(find("shaders", fallback.clone()), fallback);
+        let project = Path::new(env!("CARGO_MANIFEST_DIR"));
+        assert_eq!(project_dir().as_deref(), Some(project));
+        assert_eq!(find("shaders", "shaders"), project.join("shaders"));
+        assert_eq!(find("models", "assets/models"), project.join("assets/models"));
     }
 }

@@ -4,6 +4,7 @@
 #
 #     ./package_app.sh                 (to ~/Documents/Noctiluca.app)
 #     ./package_app.sh /some/folder    (to /some/folder/Noctiluca.app)
+#     PUBLIC=1 ./package_app.sh DIR    (a build to share: see below)
 
 set -e
 cd "$(dirname "$0")"
@@ -12,7 +13,19 @@ DEST="${1:-$HOME/Documents}"
 APP="$DEST/Noctiluca.app"
 VERSION="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
 
-cargo build --release --quiet
+# PUBLIC=1: a build to give to others. It leaves out adb (below) and keeps
+# the paths of this computer out of the program (Rust keeps the source
+# path of every place that can panic), in its own target folder so the
+# everyday build is not thrown away.
+TARGET=target
+if [ "${PUBLIC:-0}" = 1 ]; then
+    TARGET=target/public
+    # The encoded form (flags joined by the 0x1f character) keeps paths
+    # with spaces in one piece.
+    US=$'\x1f'
+    export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=$HOME/.cargo/registry/src=/cargo${US}--remap-path-prefix=$HOME/.rustup=/rustup${US}--remap-path-prefix=$PWD=/noctiluca"
+fi
+CARGO_TARGET_DIR="$TARGET" cargo build --release --quiet
 
 # The Noctiluca Screen app for Android TV boxes (android/), built when Java
 # and Gradle are here, so the menu can install it on boxes on the network.
@@ -36,12 +49,15 @@ ADB="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp target/release/noctiluca "$APP/Contents/MacOS/noctiluca"
+cp "$TARGET/release/noctiluca" "$APP/Contents/MacOS/noctiluca"
 cp -R shaders "$APP/Contents/Resources/shaders"
 cp -R assets/models "$APP/Contents/Resources/models"
 cp assets/icon/Noctiluca.icns "$APP/Contents/Resources/Noctiluca.icns"
 [ -f "$APK" ] && cp "$APK" "$APP/Contents/Resources/NoctilucaScreen.apk"
-[ -x "$ADB" ] && cp "$ADB" "$APP/Contents/Resources/adb"
+# adb comes from Google's Android SDK, whose license does not allow passing
+# it on: a public build leaves it out, and the app then uses the one from
+# `brew install android-platform-tools`.
+if [ "${PUBLIC:-0}" != 1 ] && [ -x "$ADB" ]; then cp "$ADB" "$APP/Contents/Resources/adb"; fi
 
 # What macOS needs to know about the app. NSMicrophoneUsageDescription is
 # required: without it macOS silently refuses the app the microphone.

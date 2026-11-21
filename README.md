@@ -114,6 +114,16 @@ Save everything set up for a place (outputs, surfaces, network screens, lights, 
 
 ## `08` · Run it
 
+### Download
+
+Get `Noctiluca-…-macos-arm64.zip` from [Releases](https://github.com/sagistiki/noctiluca/releases) (Apple silicon, macOS 13 or later), unzip it and move **Noctiluca.app** to Applications.
+
+The app is not notarized by Apple, so the first time macOS refuses to open it. Open it once, then go to **System Settings → Privacy & Security** and press **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/Noctiluca.app`). It asks for the microphone, and for the local network when you use TV boxes.
+
+To install the receiver on TV boxes it needs `adb`: `brew install android-platform-tools`.
+
+### Build from source
+
 Requirements: macOS 13 or later, [Rust](https://rustup.rs) 1.95 or later.
 
 ```bash

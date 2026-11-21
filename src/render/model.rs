@@ -26,10 +26,7 @@ pub struct Model {
 
 /// The folder with the GLB files: inside the app when packed as one, else the project's.
 pub fn default_dir() -> PathBuf {
-    super::resources::find(
-        "models",
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/models"),
-    )
+    super::resources::find("models", "assets/models")
 }
 
 pub fn load(path: &Path) -> Result<Model> {

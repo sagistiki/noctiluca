@@ -27,15 +27,15 @@ pub fn adb_path() -> Option<PathBuf> {
             p.exists().then_some(p)
         })
         .or_else(|| {
-            let p = PathBuf::from("/opt/homebrew/bin/adb");
-            p.exists().then_some(p)
+            // Homebrew's android-platform-tools, on Apple silicon and on Intel.
+            ["/opt/homebrew/bin/adb", "/usr/local/bin/adb"].into_iter().map(PathBuf::from).find(|p| p.exists())
         })
 }
 
 /// The app's package to install: shipped inside Noctiluca, or just built.
 pub fn apk_path() -> Option<PathBuf> {
     bundled("NoctilucaScreen.apk").or_else(|| {
-        let p = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("android/app/build/outputs/apk/release/app-release.apk");
+        let p = crate::render::resources::project_dir()?.join("android/app/build/outputs/apk/release/app-release.apk");
         p.exists().then_some(p)
     })
 }
@@ -54,7 +54,7 @@ pub enum BoxState {
 }
 
 fn adb(args: &[&str]) -> Result<String> {
-    let path = adb_path().context("adb was not found (Android platform tools)")?;
+    let path = adb_path().context("adb was not found: install it with `brew install android-platform-tools`, then try again")?;
     let out = Command::new(path).args(args).output().context("adb did not run")?;
     let text = String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr);
     Ok(text)

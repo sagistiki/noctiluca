@@ -150,10 +150,7 @@ impl ShaderWatcher {
 
 /// The shader folder: inside the app when packed as one, else the project's.
 pub fn default_dir() -> PathBuf {
-    super::resources::find(
-        "shaders",
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("shaders"),
-    )
+    super::resources::find("shaders", "shaders")
 }
 
 #[cfg(test)]
