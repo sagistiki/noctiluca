@@ -1,4 +1,4 @@
-//! noctiluca: a techno visualizer.
+//! noctiluca: a live club visualizer.
 //!
 //! The crate is a library plus a thin binary so that tests and examples can
 //! reach every module.

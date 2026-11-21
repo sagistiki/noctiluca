@@ -42,7 +42,7 @@ use noctiluca::sync::BeatClock;
 use noctiluca::ui::{self, Live, Ui, UiAction};
 
 #[derive(Parser)]
-#[command(name = "noctiluca", about = "Noctiluca: a live techno visualizer")]
+#[command(name = "noctiluca", about = "Noctiluca: a live club visualizer")]
 struct Args {
     /// Play and analyse a WAV file instead of listening to an input device.
     #[arg(long)]

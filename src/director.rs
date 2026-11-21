@@ -549,7 +549,7 @@ fn vibe_weight(taste: impl Into<Taste>, at: Spot) -> f32 {
     1.0 + (fit - 1.0) * sure
 }
 
-/// A phrase: the unit techno is built in. Something changes at the end of each.
+/// A phrase: the unit club music is built in. Something changes at the end of each.
 const PHRASE_BEATS: u64 = 16;
 const FADE_BEATS: f32 = 2.0;
 /// A drop cuts instead of fading.

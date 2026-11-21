@@ -2,7 +2,7 @@
 name = "noctiluca"
 version = "0.1.0"
 edition = "2024"
-description = "A live techno visualizer for macOS: screens, projectors, TV boxes and DMX lights, in sync with the music"
+description = "A live club visualizer for macOS: screens, projectors, TV boxes and DMX lights, in sync with the music"
 license = "MIT"
 repository = "https://github.com/sagistiki/noctiluca"
 readme = "README.md"

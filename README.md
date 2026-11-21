@@ -3,9 +3,10 @@
 </p>
 
 <p align="center">
-  <b>A live techno visualizer for macOS.</b><br>
+  <b>A live club visualizer for macOS.</b><br>
   It listens to the room, finds the kick, reads the vibe, and plays the night<br>
-  on screens, projectors, TV boxes and DMX lights, in sync.
+  on screens, projectors, TV boxes and DMX lights, in sync.<br>
+  Techno, house, trance: anything built on a kick.
 </p>
 
 <p align="center">

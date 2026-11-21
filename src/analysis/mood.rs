@@ -1,6 +1,6 @@
 //! Where in the track are we: groove, breakdown, build or drop?
 //!
-//! Techno is built on the kick. Take the low end away and the room waits
+//! Club music is built on the kick. Take the low end away and the room waits
 //! (breakdown); add rising noise and rolls on top and it winds up (build);
 //! bring the kick back and it lands (drop). So the whole detector watches
 //! two things: how much low end there is compared to a moment ago, and
