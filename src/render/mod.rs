@@ -108,8 +108,9 @@ struct Targets {
 }
 
 struct Pipelines {
-    /// One per background × pattern, at index `bg * PATTERNS.len() + pattern`.
-    scenes: Vec<wgpu::RenderPipeline>,
+    /// Every background and pattern in one program; a draw picks the pair
+    /// by its instance number (see `scene_instance`).
+    scene: wgpu::RenderPipeline,
     post: wgpu::RenderPipeline,
     glow_across: wgpu::RenderPipeline,
     glow_down: wgpu::RenderPipeline,
@@ -659,7 +660,8 @@ impl Renderer {
         let now = v.flip;
         let scene = |look: Look| {
             let look = look.wrapped();
-            &p.scenes[look.bg * PATTERNS.len() + look.pattern]
+            let k = (look.bg * shaders::SCENE_SLOTS + look.pattern) as u32;
+            k..k + 1
         };
 
         // The scene: the outgoing look, with the incoming one faded in over it.
@@ -668,20 +670,19 @@ impl Renderer {
         {
             let mut rp = begin_pass(encoder, &t.scene.view);
             rp.set_bind_group(0, uniforms, &[]);
-            rp.set_pipeline(scene(show.from));
+            rp.set_pipeline(&p.scene);
             rp.set_blend_constant(wgpu::Color::WHITE);
-            rp.draw(0..3, 0..1);
+            rp.draw(0..3, scene(show.from));
             let same_scene = (show.from.bg, show.from.pattern) == (show.to.bg, show.to.pattern);
             if !same_scene && show.mix > 0.0 {
                 let m = show.mix as f64;
-                rp.set_pipeline(scene(show.to));
                 rp.set_blend_constant(wgpu::Color {
                     r: m,
                     g: m,
                     b: m,
                     a: m,
                 });
-                rp.draw(0..3, 0..1);
+                rp.draw(0..3, scene(show.to));
             }
         }
         let on_screen = Self::objects_on_screen(show);
@@ -1054,21 +1055,8 @@ impl Gpu {
     /// shader error as text.
     fn pipelines(&self, dir: &Path, screen: wgpu::TextureFormat) -> Result<Pipelines, String> {
         let text = |r: Result<shaders::Assembled>| r.map_err(|e| format!("{e:#}"));
-        let mut scenes = Vec::with_capacity(BACKGROUNDS.len() * PATTERNS.len());
-        for bg in BACKGROUNDS {
-            for pattern in PATTERNS {
-                let source = shaders::assemble(dir, bg, pattern).map_err(|e| format!("{e:#}"))?;
-                let label = format!("{bg} + {pattern}");
-                scenes.push(self.pipeline(
-                    &label,
-                    &source,
-                    "fs_main",
-                    HDR_FORMAT,
-                    Reads::Nothing,
-                    Some(CROSS_FADE),
-                )?);
-            }
-        }
+        let scene_source = text(shaders::assemble_scene(dir, &BACKGROUNDS, &PATTERNS))?;
+        let scene = self.pipeline("scene", &scene_source, "fs_main", HDR_FORMAT, Reads::Nothing, Some(CROSS_FADE))?;
         let post = text(shaders::assemble_pass(dir, "post"))?;
         let glow = text(shaders::assemble_pass(dir, "glow"))?;
         let present = text(shaders::assemble_pass(dir, "present"))?;
@@ -1090,7 +1078,7 @@ impl Gpu {
             atmos,
             object: self.object_pipeline(&object, false)?,
             object_backdrop: self.object_pipeline(&object, true)?,
-            scenes,
+            scene,
             post: self.pipeline(
                 "post",
                 &post,
@@ -1268,7 +1256,7 @@ impl Gpu {
                 layout: Some(&layout),
                 vertex: wgpu::VertexState {
                     module: &module,
-                    entry_point: Some("vs_main"),
+                    entry_point: Some(source.vertex),
                     compilation_options: Default::default(),
                     buffers: &[],
                 },

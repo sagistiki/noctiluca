@@ -18,23 +18,30 @@ fn read(dir: &Path, name: &str) -> Result<String> {
 /// from which file so an error can point at the file you actually edited.
 pub struct Assembled {
     pub source: String,
+    /// The vertex shader's entry point.
+    pub vertex: &'static str,
     /// (file name, number of lines), in order.
     parts: Vec<(String, usize)>,
 }
 
 impl Assembled {
     fn from_files(dir: &Path, names: &[String]) -> Result<Self> {
+        let texts = names.iter().map(|n| Ok((n.clone(), read(dir, n)?))).collect::<Result<Vec<_>>>()?;
+        Ok(Self::from_texts(texts))
+    }
+
+    /// Pieces of source, each under the name an error should point at.
+    fn from_texts(texts: Vec<(String, String)>) -> Self {
         let mut source = String::new();
         let mut parts = Vec::new();
-        for name in names {
-            let mut text = read(dir, name)?;
+        for (name, mut text) in texts {
             if !text.ends_with('\n') {
                 text.push('\n');
             }
-            parts.push((name.clone(), text.lines().count()));
+            parts.push((name, text.lines().count()));
             source.push_str(&text);
         }
-        Ok(Self { source, parts })
+        Self { source, vertex: "vs_main", parts }
     }
 
     /// Which file a line of the glued source came from, and its line number there.
@@ -67,17 +74,51 @@ impl Assembled {
     }
 }
 
-/// A scene shader: common + one background + one pattern + scene.
-pub fn assemble(dir: &Path, bg: &str, pat: &str) -> Result<Assembled> {
-    Assembled::from_files(
-        dir,
-        &[
-            "common.wgsl".into(),
-            format!("bg_{bg}.wgsl"),
-            format!("pat_{pat}.wgsl"),
-            "scene.wgsl".into(),
-        ],
-    )
+/// The scene shader: every background and every pattern in one program,
+/// which draws the pair a draw call asks for (its instance number is
+/// `background * SCENE_SLOTS + pattern`; see scene.wgsl). One program,
+/// however many looks there are, instead of one per pair.
+///
+/// Each bg_NAME.wgsl defines `background(p)` and each pat_NAME.wgsl
+/// `pattern(p, base)`; they are renamed `background_K` and `pattern_K` here.
+/// Any other function or constant in those files needs a name of its own.
+pub fn assemble_scene(dir: &Path, backgrounds: &[&str], patterns: &[&str]) -> Result<Assembled> {
+    let mut texts = vec![("common.wgsl".to_string(), read(dir, "common.wgsl")?)];
+    for (k, bg) in backgrounds.iter().enumerate() {
+        let name = format!("bg_{bg}.wgsl");
+        let text = read(dir, &name)?;
+        anyhow::ensure!(text.contains("fn background("), "{name} has no `fn background(`");
+        texts.push((name, text.replacen("fn background(", &format!("fn background_{k}("), 1)));
+    }
+    for (k, pat) in patterns.iter().enumerate() {
+        let name = format!("pat_{pat}.wgsl");
+        let text = read(dir, &name)?;
+        anyhow::ensure!(text.contains("fn pattern("), "{name} has no `fn pattern(`");
+        texts.push((name, text.replacen("fn pattern(", &format!("fn pattern_{k}("), 1)));
+    }
+    texts.push(("(the scene's look switch)".to_string(), dispatch(backgrounds.len(), patterns.len())));
+    texts.push(("scene.wgsl".to_string(), read(dir, "scene.wgsl")?));
+    let mut shader = Assembled::from_texts(texts);
+    shader.vertex = "vs_scene";
+    Ok(shader)
+}
+
+/// How many patterns a background has room for in a draw's instance number.
+pub const SCENE_SLOTS: usize = 64;
+
+/// The functions that call background K and pattern K by number.
+fn dispatch(backgrounds: usize, patterns: usize) -> String {
+    let mut out = String::from("fn background_at(k: u32, p: vec2f) -> vec3f {\n    switch k {\n");
+    for k in 0..backgrounds {
+        out += &format!("        case {k}u: {{ return background_{k}(p); }}\n");
+    }
+    out += "        default: { return background_0(p); }\n    }\n}\n";
+    out += "fn pattern_at(k: u32, p: vec2f, base: vec3f) -> vec3f {\n    switch k {\n";
+    for k in 0..patterns {
+        out += &format!("        case {k}u: {{ return pattern_{k}(p, base); }}\n");
+    }
+    out += "        default: { return pattern_0(p, base); }\n    }\n}\n";
+    out
 }
 
 /// An atmosphere pass: common + atmos_NAME + atmos.
@@ -158,16 +199,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_combination_validates() {
+    fn the_scene_with_every_look_validates() {
         use crate::director::{BACKGROUNDS, PATTERNS};
-        for bg in BACKGROUNDS {
-            for pattern in PATTERNS {
-                let shader = assemble(&default_dir(), bg, pattern).unwrap();
-                shader
-                    .validate()
-                    .unwrap_or_else(|e| panic!("{bg} + {pattern}: {e}"));
-            }
-        }
+        assert!(PATTERNS.len() <= SCENE_SLOTS);
+        let shader = assemble_scene(&default_dir(), &BACKGROUNDS, &PATTERNS).unwrap();
+        shader.validate().unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(shader.vertex, "vs_scene");
     }
 
     #[test]
@@ -203,7 +240,7 @@ mod tests {
         let broken =
             "// a comment\n\nfn pattern(p: vec2f, base: vec3f) -> vec3f {\n    return oops;\n}\n";
         std::fs::write(dir.join("pat_rings.wgsl"), broken).unwrap();
-        let message = assemble(&dir, "tunnel", "rings")
+        let message = assemble_scene(&dir, &["tunnel"], &["scope", "rings"])
             .unwrap()
             .validate()
             .unwrap_err();
@@ -213,7 +250,7 @@ mod tests {
 
     #[test]
     fn locate_maps_every_line_to_its_file() {
-        let shader = assemble(&default_dir(), "tunnel", "rings").unwrap();
+        let shader = assemble_scene(&default_dir(), &["tunnel"], &["rings"]).unwrap();
         assert_eq!(shader.locate(1), Some(("common.wgsl", 1)));
         let total = shader.source.lines().count();
         let (file, line) = shader.locate(total).unwrap();
@@ -241,6 +278,6 @@ mod tests {
 
     #[test]
     fn missing_file_is_an_error_not_a_panic() {
-        assert!(assemble(&default_dir(), "does_not_exist", "rings").is_err());
+        assert!(assemble_scene(&default_dir(), &["does_not_exist"], &["rings"]).is_err());
     }
 }
