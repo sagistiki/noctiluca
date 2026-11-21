@@ -1,0 +1,57 @@
+<!doctype html>
+<!-- The Android TV launcher banner of Noctiluca Screen
+     (android/app/src/main/res/drawable-xhdpi/banner.png, 640×360).
+     Rendered by docs/brand/render.sh. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Noctiluca Screen banner</title>
+<style>
+  html, body { margin: 0; background: #01060F; }
+  .banner { position: relative; width: 640px; height: 360px; overflow: hidden; font-family: "Avenir Next", "Helvetica Neue", sans-serif; }
+  .banner svg { position: absolute; inset: 0; }
+  .words { position: absolute; right: 40px; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px; }
+  .name { font-weight: 200; font-size: 50px; letter-spacing: 0.18em; margin-right: -0.18em; color: #F6EFE3; }
+  .sub { font-weight: 400; font-size: 22px; letter-spacing: 0.3em; margin-right: -0.3em; color: #8EC5FF; }
+</style>
+</head>
+<body>
+<div class="banner">
+  <svg width="640" height="360" viewBox="130 0 667 375" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="sea" gradientUnits="userSpaceOnUse" x1="0" y1="94" x2="1072" y2="281">
+        <stop offset="0" stop-color="#F6EFE3"/>
+        <stop offset="0.18" stop-color="#E2E9EE"/>
+        <stop offset="0.28" stop-color="#8EC5FF"/>
+        <stop offset="0.35" stop-color="#2E7CF6"/>
+        <stop offset="0.48" stop-color="#0B3B8F"/>
+        <stop offset="0.68" stop-color="#04163A"/>
+        <stop offset="1" stop-color="#01060F"/>
+      </linearGradient>
+      <filter id="band-blur" x="-50%" y="-30%" width="200%" height="160%"><feGaussianBlur stdDeviation="42"/></filter>
+      <filter id="crest-blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3"/></filter>
+      <filter id="spark" x="-200%" y="-200%" width="500%" height="500%">
+        <feGaussianBlur stdDeviation="3.5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <path id="crest" d="M200,-20 C250,60 300,120 330,190 S390,320 440,400"/>
+    </defs>
+    <rect width="1072" height="375" fill="url(#sea)"/>
+    <use href="#crest" fill="none" stroke="#4DA6FF" stroke-width="120" stroke-opacity="0.55" filter="url(#band-blur)"/>
+    <use href="#crest" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-opacity="0.85" filter="url(#crest-blur)"/>
+    <use href="#crest" fill="none" stroke="#BFE6FF" stroke-width="3" stroke-opacity="0.5" transform="translate(26 6)"/>
+    <g fill="#E6F6FF" filter="url(#spark)">
+      <circle cx="236" cy="40" r="3"/><circle cx="262" cy="92" r="4.5"/><circle cx="300" cy="70" r="2"/>
+      <circle cx="318" cy="150" r="5"/><circle cx="352" cy="128" r="2.4"/><circle cx="340" cy="210" r="3.4"/>
+      <circle cx="372" cy="250" r="6"/><circle cx="398" cy="196" r="2.2" opacity="0.8"/><circle cx="386" cy="300" r="3"/>
+      <circle cx="420" cy="340" r="4.2" opacity="0.85"/><circle cx="450" cy="268" r="2.4" opacity="0.7"/><circle cx="470" cy="150" r="3" opacity="0.6"/>
+      <circle cx="520" cy="230" r="5.5" opacity="0.5"/><circle cx="560" cy="90" r="2.2" opacity="0.45"/>
+    </g>
+  </svg>
+  <div class="words">
+    <div class="name">NOCTILUCA</div>
+    <div class="sub">SCREEN</div>
+  </div>
+</div>
+</body>
+</html>

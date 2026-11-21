@@ -1,0 +1,22 @@
+/target
+.DS_Store
+
+# Local material: recordings, the generated test track, Blender sources,
+# render checks, internal planning notes and sketches.
+/recordings/
+/assets/*.wav
+/blender/sources/
+/snapshots/
+/docs/superpowers/
+/docs/sketches/
+/docs/screens/
+.superpowers/
+
+# Android build output, the local SDK path, and the release signing key.
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/keystore.properties
+/android/*.keystore
