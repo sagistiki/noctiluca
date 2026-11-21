@@ -243,15 +243,13 @@ fn vhs_picture(uv: vec2f) -> vec3f {
     );
 }
 
+// The tape's colour and lines, without tape noise: white flecks over the
+// show looked like dirt on the screen, not like a tape.
 fn vhs(col: vec3f, uv: vec2f) -> vec3f {
-    let t = u.res_time.z;
     let luma = dot(col, vec3f(0.299, 0.587, 0.114));
     var c = mix(vec3f(luma), col, 0.8) * vec3f(1.02, 0.98, 1.05);   // tape colour: a bit washed out
     c *= 0.9 + 0.1 * sin(uv.y * u.res_time.y * 1.5);                   // scan lines
-    // Tape noise: white flecks, thickest in the rolling band.
-    let band = exp(-abs(uv.y - fract(t * 0.13)) * 25.0);
-    let fleck = step(0.985 - 0.04 * band, hash21(vec2f(floor(uv.x * 320.0), floor(uv.y * 240.0) + floor(t * 30.0) * 7.0)));
-    return c + vec3f(fleck * (0.25 + 0.5 * band));
+    return c;
 }
 
 // Thermal: brightness becomes heat. Black, deep blue, violet, red, orange,

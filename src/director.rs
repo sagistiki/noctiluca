@@ -157,7 +157,7 @@ pub const POST_PRESETS: [[[f32; 4]; 3]; 11] = [
         [0.002, 0.000, 0.6, 0.0],
         [0.55, 0.0, 0.0, 0.0],
     ],
-    // vhs: a worn tape: wobbling lines, colours slipping apart, tape noise
+    // vhs: a worn tape: wobbling lines, colours slipping apart, scan lines
     [
         [0.20, 0.00, 0.00, 0.0],
         [0.002, 0.000, 0.7, 0.0],
