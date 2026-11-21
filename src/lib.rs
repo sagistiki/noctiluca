@@ -6,6 +6,7 @@
 pub mod analysis;
 pub mod audio;
 pub mod director;
+pub mod files;
 #[cfg(unix)]
 pub mod dmx;
 pub mod render;

@@ -41,10 +41,14 @@ pub struct Live {
     /// The show preview's width over height (0: 16:9). With projectors on
     /// it is their main picture, whatever shape their surfaces give it.
     pub preview_aspect: f32,
-    /// The saved venues, and the one in use (with changes since it was saved, or not).
+    /// The venue files (in the venue folder, and opened from elsewhere
+    /// lately), and the one in use (with changes since it was saved, or not).
     pub venues: Vec<venues::VenueInfo>,
     pub venue_active: Option<String>,
+    pub venue_path: Option<std::path::PathBuf>,
     pub venue_changed: bool,
+    /// The venue folder as people read it: "~/Documents/Noctiluca Venues".
+    pub venue_library: String,
     /// Screens on the network (Android TVs, boxes with the app open).
     pub net_screens: Vec<NetScreen>,
     /// Per output: its network link, when its display is a network screen.
@@ -108,10 +112,19 @@ pub enum UiAction {
     App(Action),
     /// `None`: choose the best input by itself.
     SelectInput(Option<String>),
-    LoadVenue(String),
-    SaveVenue(String),
-    RenameVenue(String, String),
-    DeleteVenue(String),
+    /// Open this venue file.
+    LoadVenue(std::path::PathBuf),
+    /// Save into the venue file in use (Save As when there is none).
+    SaveVenue,
+    /// Save into this venue file, replacing what it held.
+    SaveVenueTo(std::path::PathBuf),
+    /// The Mac's Save panel, for a new venue file.
+    SaveVenueAs,
+    /// The Mac's Open panel, for a venue file from anywhere.
+    OpenVenue,
+    RevealVenue(std::path::PathBuf),
+    RenameVenue(std::path::PathBuf, String),
+    TrashVenue(std::path::PathBuf),
     /// Install (or update) the screen app on the box at this address, and open it.
     NetInstall(String),
     /// Open the app on the box (it was installed already).

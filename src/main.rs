@@ -391,10 +391,14 @@ struct App {
     /// Slow to ask for, so looked up now and then: inputs, displays, venues.
     inputs: Vec<String>,
     displays: Vec<String>,
-    venues: Vec<String>,
-    /// Each saved venue as it is on disk: to show what it holds and to tell
-    /// whether the set-up now differs from the active one.
-    venue_cache: HashMap<String, Settings>,
+    /// The venue files: those in the venue folder, then the ones opened
+    /// from elsewhere lately.
+    venues: Vec<std::path::PathBuf>,
+    /// Each venue file as it is on disk: to show what it holds and to tell
+    /// whether the set-up now differs from the one in use.
+    venue_cache: HashMap<std::path::PathBuf, Settings>,
+    /// The Mac's Open or Save panel, while one is open.
+    file_panel: Option<noctiluca::files::Panel>,
     lists_at: Option<Instant>,
     /// A message for the menu, and when it came.
     message: Option<(String, Instant)>,
@@ -639,6 +643,7 @@ impl App {
             displays: Vec::new(),
             venues: Vec::new(),
             venue_cache: HashMap::new(),
+            file_panel: None,
             lists_at: None,
             message: message.map(|m| (m, now)),
             features: Features::default(),
@@ -967,49 +972,53 @@ impl App {
             UiAction::SelectInput(name) => {
                 self.switch_input(name);
             }
-            UiAction::LoadVenue(name) => match settings::load_venue(&name) {
-                Ok(venue) => {
-                    let s = self.settings.with_venue(venue, &name);
-                    let input = s.input_device.clone();
-                    self.apply_settings(s);
-                    if input != self.args.device && self.args.file.is_none() {
-                        self.switch_input(input);
-                    }
-                    self.notify(format!("Loaded “{name}”"));
-                }
-                Err(e) => self.notify(format!("Cannot load “{name}”: {e:#}")),
+            UiAction::LoadVenue(path) => self.load_venue(&path, event_loop),
+            UiAction::SaveVenue => match self.settings.venue_file.clone().filter(|p| p.exists()) {
+                Some(path) => self.save_venue_to(&path),
+                None => self.act(UiAction::SaveVenueAs, event_loop),
             },
-            UiAction::SaveVenue(name) => match settings::save_venue(&name, &self.settings) {
-                Ok(()) => {
+            UiAction::SaveVenueTo(path) => self.save_venue_to(&path),
+            UiAction::SaveVenueAs => {
+                if self.file_panel.is_none() {
+                    let dir = self.venue_folder();
+                    let name = self.settings.last_venue.clone().unwrap_or_default();
+                    self.file_panel = Some(noctiluca::files::save_venue_as(&dir, &name));
+                }
+            }
+            UiAction::OpenVenue => {
+                if self.file_panel.is_none() {
+                    self.file_panel = Some(noctiluca::files::open_venue(&self.venue_folder()));
+                }
+            }
+            UiAction::RevealVenue(path) => noctiluca::files::reveal(&path),
+            UiAction::RenameVenue(path, to) => match settings::rename_venue_file(&path, &to) {
+                Ok(dest) => {
                     let mut s = self.settings.clone();
-                    s.last_venue = Some(name.clone());
+                    for r in &mut s.recent_venues {
+                        if *r == path {
+                            *r = dest.clone();
+                        }
+                    }
+                    if s.venue_file.as_ref() == Some(&path) {
+                        s.set_venue_file(Some(dest.clone()));
+                    }
                     self.apply_settings(s);
                     self.reload_venues();
-                    self.notify(format!("Saved “{name}”"));
-                }
-                Err(e) => self.notify(format!("Cannot save “{name}”: {e:#}")),
-            },
-            UiAction::RenameVenue(from, to) => match settings::rename_venue(&from, &to) {
-                Ok(()) => {
-                    if self.settings.last_venue.as_deref() == Some(from.as_str()) {
-                        let mut s = self.settings.clone();
-                        s.last_venue = Some(to.trim().to_string());
-                        self.apply_settings(s);
-                    }
-                    self.reload_venues();
-                    self.notify(format!("Renamed “{from}” to “{}”", to.trim()));
+                    self.notify(format!("Renamed to “{}”", settings::venue_name(&dest)));
                 }
                 Err(e) => self.notify(format!("{e:#}")),
             },
-            UiAction::DeleteVenue(name) => match settings::delete_venue(&name) {
+            UiAction::TrashVenue(path) => match settings::trash_venue_file(&path) {
                 Ok(()) => {
-                    if self.settings.last_venue.as_deref() == Some(name.as_str()) {
-                        let mut s = self.settings.clone();
+                    let mut s = self.settings.clone();
+                    s.recent_venues.retain(|r| *r != path);
+                    if s.venue_file.as_ref() == Some(&path) {
+                        s.venue_file = None;
                         s.last_venue = None;
-                        self.apply_settings(s);
                     }
+                    self.apply_settings(s);
                     self.reload_venues();
-                    self.notify(format!("Deleted “{name}”"));
+                    self.notify(format!("Moved “{}” to the Trash", settings::venue_name(&path)));
                 }
                 Err(e) => self.notify(format!("{e:#}")),
             },
@@ -1077,10 +1086,94 @@ impl App {
         self.notify(format!("{name} is output {}", k + 1));
     }
 
-    /// Reads the saved venues again (names and what each holds).
+    /// Reads the venue files again: the venue folder's, then the ones
+    /// opened from elsewhere lately; and what each holds.
     fn reload_venues(&mut self) {
-        self.venues = settings::venues();
-        self.venue_cache = self.venues.iter().filter_map(|n| Some((n.clone(), settings::load_venue(n).ok()?.venue_preset()))).collect();
+        let library = settings::venue_library();
+        let mut list = settings::venues_in(&library);
+        for p in &self.settings.recent_venues {
+            if !list.contains(p) && p.is_file() {
+                list.push(p.clone());
+            }
+        }
+        self.venue_cache = list.iter().filter_map(|p| Some((p.clone(), settings::load_venue_file(p).ok()?.venue_preset()))).collect();
+        self.venues = list;
+    }
+
+    /// Where the Open and Save panels start: the folder of the venue in
+    /// use, else the venue folder (made if it is not there yet).
+    fn venue_folder(&self) -> std::path::PathBuf {
+        let library = settings::venue_library();
+        let _ = std::fs::create_dir_all(&library);
+        self.settings.venue_file.as_deref().and_then(|p| p.parent()).filter(|d| d.is_dir()).map(|d| d.to_path_buf()).unwrap_or(library)
+    }
+
+    /// Loads a venue file over the set-up now (the input device stays).
+    fn load_venue(&mut self, path: &std::path::Path, _event_loop: &ActiveEventLoop) {
+        let name = settings::venue_name(path);
+        match settings::load_venue_file(path) {
+            Ok(venue) => {
+                let s = self.settings.with_venue(venue, path);
+                let input = s.input_device.clone();
+                self.apply_settings(s);
+                if input != self.args.device && self.args.file.is_none() {
+                    self.switch_input(input);
+                }
+                self.reload_venues();
+                self.notify(format!("Opened “{name}”"));
+            }
+            Err(e) => self.notify(format!("Cannot open “{name}”: {e:#}")),
+        }
+    }
+
+    /// Saves the set-up into a venue file, which becomes the one in use.
+    fn save_venue_to(&mut self, path: &std::path::Path) {
+        match settings::save_venue_file(path, &self.settings) {
+            Ok(dest) => {
+                let mut s = self.settings.clone();
+                s.set_venue_file(Some(dest.clone()));
+                self.apply_settings(s);
+                self.reload_venues();
+                self.notify(format!("Saved “{}”", settings::venue_name(&dest)));
+            }
+            Err(e) => self.notify(format!("Cannot save: {e:#}")),
+        }
+    }
+
+    /// A file dropped on the window, or chosen in the Open panel: opened
+    /// if it is a venue, asking first over unsaved changes.
+    fn open_venue_file(&mut self, path: std::path::PathBuf, event_loop: &ActiveEventLoop) {
+        if !settings::is_venue_file(&path) && settings::load_venue_file(&path).is_err() {
+            self.notify(format!("“{}” is not a venue file (they end in _nocvenue.json)", path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()));
+            return;
+        }
+        let live = self.live();
+        match &mut self.ui {
+            Some(ui) => {
+                let mut actions = Vec::new();
+                ui::venues::ask_load(path, &live, &mut ui.pages.venues, &mut actions);
+                if !actions.is_empty() || !matches!(self.state.page, noctiluca::app_state::Page::Venues) {
+                    // Show the page, where the question (if any) is asked.
+                    self.state.page = noctiluca::app_state::Page::Venues;
+                }
+                for a in actions {
+                    self.act(a, event_loop);
+                }
+            }
+            None => self.load_venue(&path, event_loop),
+        }
+    }
+
+    /// The answer of an Open or Save panel, once it closes.
+    fn poll_file_panel(&mut self, event_loop: &ActiveEventLoop) {
+        let Some(answer) = self.file_panel.as_ref().and_then(|p| p.poll()) else { return };
+        let purpose = self.file_panel.take().map(|p| p.purpose);
+        let Some(path) = answer else { return };
+        match purpose {
+            Some(noctiluca::files::Purpose::OpenVenue) => self.open_venue_file(path, event_loop),
+            Some(noctiluca::files::Purpose::SaveVenueAs) => self.save_venue_to(&path),
+            None => {}
+        }
     }
 
     /// Something must be drawn every frame even with the Mac's window hidden.
@@ -1655,18 +1748,23 @@ impl App {
                     })
                 })
                 .collect(),
-            venues: self
-                .venues
-                .iter()
-                .map(|n| ui::venues::VenueInfo { name: n.clone(), summary: self.venue_cache.get(n).map(|v| v.venue_summary()).unwrap_or_default() })
-                .collect(),
-            venue_active: self.settings.last_venue.clone().filter(|n| self.venue_cache.contains_key(n)),
-            venue_changed: self
-                .settings
-                .last_venue
-                .as_ref()
-                .and_then(|n| self.venue_cache.get(n))
-                .is_some_and(|v| *v != self.settings.venue_preset()),
+            venues: {
+                let library = settings::venue_library();
+                self.venues
+                    .iter()
+                    .map(|p| ui::venues::VenueInfo {
+                        name: settings::venue_name(p),
+                        summary: self.venue_cache.get(p).map(|v| v.venue_summary()).unwrap_or_default(),
+                        path: p.clone(),
+                        folder: p.parent().map(noctiluca::files::pretty_folder).unwrap_or_default(),
+                        in_library: p.parent() == Some(library.as_path()),
+                    })
+                    .collect()
+            },
+            venue_active: self.settings.venue_file.as_ref().filter(|p| self.venue_cache.contains_key(*p)).map(|p| settings::venue_name(p)),
+            venue_path: self.settings.venue_file.clone().filter(|p| self.venue_cache.contains_key(p)),
+            venue_changed: self.settings.venue_file.as_ref().and_then(|p| self.venue_cache.get(p)).is_some_and(|v| *v != self.settings.venue_preset()),
+            venue_library: noctiluca::files::pretty_folder(&settings::venue_library()),
             net_screens: {
                 let boxes = self.boxes.lock().map(|b| b.clone()).unwrap_or_default();
                 self.discovery
@@ -2148,6 +2246,33 @@ impl ApplicationHandler for App {
             self.quit(event_loop);
             return;
         }
+        // ⌘S save, ⇧⌘S save as, ⌘O open: the venue, as files in any Mac app.
+        if let WindowEvent::KeyboardInput {
+            event:
+                KeyEvent {
+                    physical_key: PhysicalKey::Code(key @ (KeyCode::KeyS | KeyCode::KeyO)),
+                    state: ElementState::Pressed,
+                    repeat: false,
+                    ..
+                },
+            ..
+        } = &event
+            && self.modifiers.super_key()
+            && self.args.snapshot.is_none()
+        {
+            let action = match (key, self.modifiers.shift_key()) {
+                (KeyCode::KeyO, _) => UiAction::OpenVenue,
+                (_, true) => UiAction::SaveVenueAs,
+                _ => UiAction::SaveVenue,
+            };
+            self.act(action, event_loop);
+            return;
+        }
+        // A venue file dropped on any window opens.
+        if let WindowEvent::DroppedFile(path) = &event {
+            self.open_venue_file(path.clone(), event_loop);
+            return;
+        }
         if self.outputs.iter().any(|o| o.window.id() == _id) {
             self.output_event(_id, event, event_loop);
             return;
@@ -2280,6 +2405,7 @@ impl ApplicationHandler for App {
             // frames would look the same in a club and cost the GPU double,
             // which matters with DJ software running beside it.
             self.refresh_lists(event_loop);
+            self.poll_file_panel(event_loop);
             self.check_output(event_loop);
             // --play: start once the screens are there, or after a few seconds.
             if let Some(at) = self.play_at
@@ -2539,9 +2665,15 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let (settings, message) = settings::load();
+    let (mut settings, message) = settings::load();
     if let Some(m) = &message {
         eprintln!("{m}");
+    }
+    // Venues from before venue files become files in the venue folder, once.
+    let moved = settings::migrate_old_venues(&settings::dir(), &settings::venue_library());
+    settings.adopt_venue_files(&settings::venue_library());
+    if moved > 0 {
+        eprintln!("moved {moved} venues to {}", settings::venue_library().display());
     }
     let mut args = args;
     // The input chosen in the menu last time, unless the command line says otherwise.

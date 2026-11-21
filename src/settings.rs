@@ -212,8 +212,13 @@ pub struct Settings {
     pub variety: f32,
     pub quality: Quality,
     pub output: OutputSetup,
-    /// The venue loaded or saved last.
+    /// The venue in use, by name (kept for settings from before venue files).
     pub last_venue: Option<String>,
+    /// The venue file in use: loaded or saved last.
+    pub venue_file: Option<PathBuf>,
+    /// Venue files opened or saved lately, newest first (also ones kept
+    /// outside the library folder).
+    pub recent_venues: Vec<PathBuf>,
     /// DMX lights.
     pub lighting: crate::lights::Lighting,
     /// How sensitive the microphone is: the sound is multiplied by this
@@ -237,6 +242,8 @@ impl Default for Settings {
             quality: Quality::High,
             output: OutputSetup::default(),
             last_venue: None,
+            venue_file: None,
+            recent_venues: Vec::new(),
             lighting: crate::lights::Lighting::default(),
             input_gain: 1.0,
         }
@@ -461,29 +468,96 @@ impl Default for Saver {
     }
 }
 
-/// A venue name made safe as a file name.
-fn venue_file(dir: &Path, name: &str) -> PathBuf {
-    let safe: String = name
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || " -_·".contains(c) {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    dir.join("venues").join(format!("{}.json", safe.trim()))
+// Venues are project files: one readable JSON file per place, named
+// "<name>_nocvenue.json", kept in ~/Documents/Noctiluca Venues by default
+// and openable from anywhere. The file holds every setting of the set-up
+// (outputs, surfaces, network screens, lights, safety, sync, themes,
+// quality), inside a small header that says what it is.
+
+/// Every venue file's name ends so: "Club Ha'Oman_nocvenue.json".
+pub const VENUE_SUFFIX: &str = "_nocvenue.json";
+/// What the file's "format" says.
+const VENUE_FORMAT: &str = "noctiluca-venue";
+/// The file layout's version; files from a newer Noctiluca are refused.
+const VENUE_VERSION: u32 = 1;
+
+/// A venue file on disk.
+#[derive(Serialize, Deserialize)]
+struct VenueFile {
+    format: String,
+    version: u32,
+    name: String,
+    /// "Noctiluca 0.1.0".
+    saved_by: String,
+    /// UTC, "2026-11-22 14:05".
+    saved_at: String,
+    settings: Settings,
+}
+
+/// Where venues are kept unless saved elsewhere: ~/Documents/Noctiluca Venues.
+pub fn venue_library() -> PathBuf {
+    let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(std::env::temp_dir);
+    home.join("Documents").join("Noctiluca Venues")
+}
+
+/// The file is a venue: its name ends in "_nocvenue.json".
+pub fn is_venue_file(path: &Path) -> bool {
+    path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.to_lowercase().ends_with(VENUE_SUFFIX) && n.len() > VENUE_SUFFIX.len())
+}
+
+/// The venue's name: its file name without "_nocvenue.json".
+pub fn venue_name(path: &Path) -> String {
+    let file = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    // The suffix is plain ASCII, so its bytes end the name in any case.
+    if file.to_lowercase().ends_with(VENUE_SUFFIX) {
+        file[..file.len() - VENUE_SUFFIX.len()].to_string()
+    } else {
+        file.trim_end_matches(".json").to_string()
+    }
+}
+
+/// The file for venue `name` in folder `dir`, the name made safe for a file.
+pub fn venue_path_in(dir: &Path, name: &str) -> PathBuf {
+    let safe: String = name.trim().chars().map(|c| if c.is_alphanumeric() || " -_·'&()".contains(c) { c } else { '_' }).collect();
+    dir.join(format!("{}{VENUE_SUFFIX}", safe.trim()))
+}
+
+/// `path` with "_nocvenue.json" at its end (a save dialog may leave it off).
+pub fn with_venue_suffix(path: &Path) -> PathBuf {
+    if is_venue_file(path) {
+        return path.to_path_buf();
+    }
+    let name = venue_name(path);
+    venue_path_in(path.parent().unwrap_or(Path::new(".")), &name)
+}
+
+/// Now in UTC, "2026-11-22 14:05", for the file's header.
+fn utc_now() -> String {
+    let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+    let (days, rem) = (secs.div_euclid(86_400), secs.rem_euclid(86_400));
+    // Days to a civil date (Howard Hinnant's algorithm).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!("{y:04}-{m:02}-{d:02} {:02}:{:02}", rem / 3600, rem % 3600 / 60)
 }
 
 impl Settings {
     /// What a venue keeps of these settings: everything (outputs, surfaces,
     /// lights, flash safety, sync, themes, quality) but the input device,
-    /// which belongs to the computer, and which venue is active.
+    /// which belongs to the computer, and the app's own memory of files.
     pub fn venue_preset(&self) -> Settings {
         Settings {
             input_device: None,
             last_venue: None,
+            venue_file: None,
+            recent_venues: Vec::new(),
             ..self.clone()
         }
         .validated()
@@ -500,108 +574,161 @@ impl Settings {
         }
         parts.join(" · ")
     }
+
+    /// These settings with a venue loaded over them: all of it except the
+    /// input device and the list of recent files, which stay this
+    /// computer's. `path` becomes the venue in use.
+    pub fn with_venue(&self, venue: Settings, path: &Path) -> Settings {
+        let mut s = Settings {
+            input_device: self.input_device.clone(),
+            recent_venues: self.recent_venues.clone(),
+            ..venue
+        };
+        s.set_venue_file(Some(path.to_path_buf()));
+        s
+    }
+
+    /// Marks `path` as the venue in use (and the most recent one).
+    pub fn set_venue_file(&mut self, path: Option<PathBuf>) {
+        self.last_venue = path.as_deref().map(venue_name);
+        if let Some(p) = &path {
+            self.recent_venues.retain(|r| r != p);
+            self.recent_venues.insert(0, p.clone());
+            self.recent_venues.truncate(MAX_RECENT_VENUES);
+        }
+        self.venue_file = path;
+    }
 }
 
-pub fn save_venue_in(dir: &Path, name: &str, settings: &Settings) -> Result<()> {
-    let name = name.trim();
-    if name.is_empty() {
+/// How many venue files opened from anywhere are remembered.
+pub const MAX_RECENT_VENUES: usize = 12;
+
+/// Writes the set-up to the venue file `path` ("_nocvenue.json" added if
+/// missing), never leaving half a file; returns where it went.
+pub fn save_venue_file(path: &Path, settings: &Settings) -> Result<PathBuf> {
+    let path = with_venue_suffix(path);
+    let name = venue_name(&path);
+    if name.trim().is_empty() {
         anyhow::bail!("a venue needs a name");
     }
-    let path = venue_file(dir, name);
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+        std::fs::create_dir_all(parent).with_context(|| format!("cannot create {}", parent.display()))?;
     }
-    // Written beside it first and then moved over it: never half a file.
+    let file = VenueFile {
+        format: VENUE_FORMAT.into(),
+        version: VENUE_VERSION,
+        name,
+        saved_by: format!("Noctiluca {}", env!("CARGO_PKG_VERSION")),
+        saved_at: utc_now(),
+        settings: settings.venue_preset(),
+    };
     let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, serde_json::to_string_pretty(&settings.venue_preset())?)
-        .with_context(|| format!("cannot write {}", tmp.display()))?;
-    std::fs::rename(&tmp, &path).with_context(|| format!("cannot write {}", path.display()))
+    std::fs::write(&tmp, serde_json::to_string_pretty(&file)? + "\n").with_context(|| format!("cannot write {}", tmp.display()))?;
+    std::fs::rename(&tmp, &path).with_context(|| format!("cannot write {}", path.display()))?;
+    Ok(path)
 }
 
-/// A venue by this name is saved already.
-pub fn venue_exists_in(dir: &Path, name: &str) -> bool {
-    venue_file(dir, name.trim()).exists()
+/// Reads a venue file: one saved by Noctiluca (any name), or a plain
+/// settings file from before venue files had a header.
+pub fn load_venue_file(path: &Path) -> Result<Settings> {
+    let text = std::fs::read_to_string(path).with_context(|| format!("cannot read {}", path.display()))?;
+    let value: serde_json::Value = serde_json::from_str(&text).with_context(|| format!("{} is not valid JSON", path.display()))?;
+    let settings = match value.get("format").and_then(|f| f.as_str()) {
+        Some(VENUE_FORMAT) => {
+            let version = value.get("version").and_then(|v| v.as_u64()).unwrap_or(0);
+            if version > u64::from(VENUE_VERSION) {
+                anyhow::bail!("it was saved by a newer Noctiluca; update the app to open it");
+            }
+            serde_json::from_value::<Settings>(value.get("settings").cloned().unwrap_or_default()).context("its settings are not readable")?
+        }
+        Some(other) => anyhow::bail!("it is a “{other}” file, not a Noctiluca venue"),
+        None if value.get("output").is_some() || value.get("lighting").is_some() => serde_json::from_value::<Settings>(value)?,
+        None => anyhow::bail!("it is not a Noctiluca venue"),
+    };
+    Ok(settings.validated())
 }
 
-pub fn delete_venue_in(dir: &Path, name: &str) -> Result<()> {
-    std::fs::remove_file(venue_file(dir, name)).with_context(|| format!("cannot delete “{name}”"))
+/// The venue files in `dir`, by name.
+pub fn venues_in(dir: &Path) -> Vec<PathBuf> {
+    let mut found: Vec<PathBuf> = std::fs::read_dir(dir).into_iter().flatten().flatten().map(|e| e.path()).filter(|p| is_venue_file(p) && p.is_file()).collect();
+    found.sort_by_key(|p| venue_name(p).to_lowercase());
+    found
 }
 
-/// Renames a venue; refuses to replace another.
-pub fn rename_venue_in(dir: &Path, from: &str, to: &str) -> Result<()> {
-    let to = to.trim();
-    if to.is_empty() {
+/// Gives a venue file a new name in the same folder; refuses to replace another.
+pub fn rename_venue_file(path: &Path, to: &str) -> Result<PathBuf> {
+    if to.trim().is_empty() {
         anyhow::bail!("a venue needs a name");
     }
-    let (a, b) = (venue_file(dir, from), venue_file(dir, to));
-    if a == b {
-        return Ok(());
+    let dest = venue_path_in(path.parent().unwrap_or(Path::new(".")), to);
+    if dest == path {
+        return Ok(dest);
     }
-    if b.exists() {
-        anyhow::bail!("there is a venue called “{to}” already");
+    if dest.exists() {
+        anyhow::bail!("there is a venue called “{}” there already", to.trim());
     }
-    std::fs::rename(&a, &b).with_context(|| format!("cannot rename “{from}”"))
+    std::fs::rename(path, &dest).with_context(|| format!("cannot rename “{}”", venue_name(path)))?;
+    Ok(dest)
 }
 
-pub fn load_venue_in(dir: &Path, name: &str) -> Result<Settings> {
-    let path = venue_file(dir, name);
-    let text = std::fs::read_to_string(&path)
-        .with_context(|| format!("cannot read {}", path.display()))?;
-    Ok(serde_json::from_str::<Settings>(&text)?.validated())
+/// Moves a venue file to the Trash (it can be put back from there).
+pub fn trash_venue_file(path: &Path) -> Result<()> {
+    let home = std::env::var_os("HOME").map(PathBuf::from).context("no home folder")?;
+    trash_in(&home.join(".Trash"), path)
+}
+
+fn trash_in(trash: &Path, path: &Path) -> Result<()> {
+    std::fs::create_dir_all(trash)?;
+    let file = path.file_name().context("not a file")?.to_string_lossy().into_owned();
+    let mut dest = trash.join(&file);
+    let mut n = 2;
+    while dest.exists() {
+        dest = trash.join(format!("{} {n}{VENUE_SUFFIX}", venue_name(path)));
+        n += 1;
+    }
+    std::fs::rename(path, &dest).with_context(|| format!("cannot move “{}” to the Trash", venue_name(path)))
+}
+
+/// Venues from before venue files (Application Support/Noctiluca/venues/
+/// <name>.json) become files in the library, once. Returns how many.
+pub fn migrate_old_venues(app_dir: &Path, library: &Path) -> usize {
+    let old = app_dir.join("venues");
+    let mut moved = 0;
+    for entry in std::fs::read_dir(&old).into_iter().flatten().flatten() {
+        let p = entry.path();
+        if p.extension().is_none_or(|e| e != "json") {
+            continue;
+        }
+        let name = p.file_stem().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let dest = venue_path_in(library, &name);
+        if dest.exists() {
+            continue;
+        }
+        if let Ok(s) = load_venue_file(&p)
+            && save_venue_file(&dest, &s).is_ok()
+            && std::fs::remove_file(&p).is_ok()
+        {
+            moved += 1;
+        }
+    }
+    let _ = std::fs::remove_dir(&old);
+    moved
 }
 
 impl Settings {
-    /// These settings with venue `name`'s preset loaded over them: all of
-    /// it except the input device, which belongs to the computer.
-    pub fn with_venue(&self, venue: Settings, name: &str) -> Settings {
-        Settings {
-            input_device: self.input_device.clone(),
-            last_venue: Some(name.to_string()),
-            ..venue
-        }
-    }
-}
-
-/// The saved venues' names, sorted.
-pub fn venues_in(dir: &Path) -> Vec<String> {
-    let mut names: Vec<String> = std::fs::read_dir(dir.join("venues"))
-        .into_iter()
-        .flatten()
-        .flatten()
-        .filter_map(|e| {
-            let p = e.path();
-            if p.extension()? != "json" {
-                return None;
+    /// After a load: an active venue named the old way (by name only)
+    /// pointed at its file in the library.
+    pub fn adopt_venue_files(&mut self, library: &Path) {
+        if self.venue_file.is_none()
+            && let Some(name) = self.last_venue.clone()
+        {
+            let p = venue_path_in(library, &name);
+            if p.exists() {
+                self.set_venue_file(Some(p));
             }
-            Some(p.file_stem()?.to_string_lossy().into_owned())
-        })
-        .collect();
-    names.sort();
-    names
-}
-
-pub fn save_venue(name: &str, settings: &Settings) -> Result<()> {
-    save_venue_in(&dir(), name, settings)
-}
-
-pub fn load_venue(name: &str) -> Result<Settings> {
-    load_venue_in(&dir(), name)
-}
-
-pub fn venues() -> Vec<String> {
-    venues_in(&dir())
-}
-
-pub fn venue_exists(name: &str) -> bool {
-    venue_exists_in(&dir(), name)
-}
-
-pub fn delete_venue(name: &str) -> Result<()> {
-    delete_venue_in(&dir(), name)
-}
-
-pub fn rename_venue(from: &str, to: &str) -> Result<()> {
-    rename_venue_in(&dir(), from, to)
+        }
+        self.recent_venues.retain(|p| p.exists());
+    }
 }
 
 #[cfg(test)]
@@ -746,40 +873,13 @@ mod tests {
     }
 
     #[test]
-    fn venue_round_trip() {
+    fn a_venue_file_round_trips_everything_but_the_input() {
         let dir = scratch("venue");
-        let mut preset = Settings {
-            strobe: false,
-            variety: 0.4,
-            input_device: Some("Mic A".into()),
-            ..Settings::default()
-        };
-        preset.output.outputs[0].display = Some("Projector".into());
-        preset.output.snap = true;
-        preset.themes[1] = false;
-        save_venue_in(&dir, "Barby · 3 screens", &preset).unwrap();
-        assert_eq!(venues_in(&dir), vec!["Barby · 3 screens".to_string()]);
-        let loaded = load_venue_in(&dir, "Barby · 3 screens").unwrap();
-        // Loaded over other settings: everything comes from the preset but
-        // the input device, which stays this computer's.
-        let here = Settings {
-            input_device: Some("Mic B".into()),
-            ..Settings::default()
-        };
-        let now = here.with_venue(loaded, "Barby · 3 screens");
-        assert_eq!(now.input_device.as_deref(), Some("Mic B"));
-        assert_eq!(now.last_venue.as_deref(), Some("Barby · 3 screens"));
-        assert!(!now.strobe && now.variety == 0.4 && now.output.snap && !now.themes[1]);
-        assert_eq!(now.output.outputs[0].display.as_deref(), Some("Projector"));
-        assert!(load_venue_in(&dir, "nowhere").is_err());
-    }
-
-    #[test]
-    fn a_venue_keeps_everything_but_the_input_and_can_be_renamed_and_deleted() {
-        let dir = scratch("venue-all");
-        let mut s = Settings { input_device: Some("Mic".into()), sync_offset_ms: 40.0, strobe: false, ..Settings::default() };
+        let mut s = Settings { input_device: Some("Mic".into()), sync_offset_ms: 40.0, strobe: false, variety: 0.4, ..Settings::default() };
         s.output.outputs[0].display = Some(network_display("living-room"));
         s.output.outputs[0].delay_ms = 25.0;
+        s.output.snap = true;
+        s.themes[1] = false;
         s.output.surfaces[0].corners = [[0.1, 0.1], [0.9, 0.12], [0.88, 0.9], [0.12, 0.88]];
         s.lighting.fixtures = vec![
             crate::lights::Fixture { name: "Spot 1".into(), address: 30, ..Default::default() },
@@ -787,26 +887,82 @@ mod tests {
         ];
         s.lighting.drive = 0.9;
         s.lighting.effect = Some(crate::lights::Effect::Wave);
-        s.lighting.strobe = crate::lights::LightStrobe::Free;
-        save_venue_in(&dir, "בית", &s).unwrap();
-        assert!(venue_exists_in(&dir, "בית"));
-        let back = load_venue_in(&dir, "בית").unwrap();
+        s.recent_venues = vec![PathBuf::from("/elsewhere/a_nocvenue.json")];
+        // Saved without the suffix: it is added.
+        let path = save_venue_file(&dir.join("Barby · 3 screens"), &s).unwrap();
+        assert_eq!(path.file_name().unwrap(), "Barby · 3 screens_nocvenue.json");
+        assert_eq!(venues_in(&dir), vec![path.clone()]);
+        assert_eq!(venue_name(&path), "Barby · 3 screens");
+        // One readable file, with a header saying what it is.
+        let text = std::fs::read_to_string(&path).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!((v["format"].as_str(), v["version"].as_u64(), v["name"].as_str()), (Some("noctiluca-venue"), Some(1), Some("Barby · 3 screens")));
+        assert!(text.contains("\n  \"settings\": {\n"), "pretty, one key a line");
+        assert!(v["settings"]["input_device"].is_null() && v["settings"]["recent_venues"].as_array().unwrap().is_empty());
+        let back = load_venue_file(&path).unwrap();
         assert_eq!(back, s.venue_preset(), "everything but the input comes back");
-        assert_eq!(back.input_device, None);
         assert_eq!(back.lighting.fixtures[0].address, 30);
         assert_eq!(s.venue_summary(), "1 output · 1 surface · 1 light · smoke");
-        // Loading keeps this computer's input and marks the venue active.
-        let here = Settings { input_device: Some("Other mic".into()), ..Settings::default() }.with_venue(back, "בית");
-        assert_eq!((here.input_device.as_deref(), here.last_venue.as_deref()), (Some("Other mic"), Some("בית")));
+        // Loaded here: this computer's input and recent files stay; the file is in use.
+        let here = Settings { input_device: Some("Other mic".into()), ..Settings::default() }.with_venue(back, &path);
+        assert_eq!(here.input_device.as_deref(), Some("Other mic"));
+        assert_eq!((here.venue_file.as_deref(), here.last_venue.as_deref()), (Some(path.as_path()), Some("Barby · 3 screens")));
+        assert_eq!(here.recent_venues, vec![path.clone()]);
         assert_eq!(here.venue_preset(), s.venue_preset());
-        // Rename (not over another), delete.
-        save_venue_in(&dir, "Club", &Settings::default()).unwrap();
-        assert!(rename_venue_in(&dir, "בית", "Club").is_err());
-        rename_venue_in(&dir, "בית", "Home").unwrap();
-        assert_eq!(venues_in(&dir), vec!["Club".to_string(), "Home".to_string()]);
-        delete_venue_in(&dir, "Club").unwrap();
-        assert_eq!(venues_in(&dir), vec!["Home".to_string()]);
-        assert!(save_venue_in(&dir, "  ", &s).is_err());
+        assert!(load_venue_file(&dir.join("nowhere_nocvenue.json")).is_err());
+        assert!(save_venue_file(&dir.join(VENUE_SUFFIX), &s).is_err(), "no name");
+    }
+
+    #[test]
+    fn venue_files_are_told_apart_and_old_ones_still_open() {
+        let dir = scratch("venue-kinds");
+        assert!(is_venue_file(Path::new("/x/Club_nocvenue.json")) && is_venue_file(Path::new("Club_NOCVENUE.JSON")));
+        assert!(!is_venue_file(Path::new("/x/Club.json")) && !is_venue_file(Path::new("/x/_nocvenue.json")));
+        // A plain settings file (a venue from before venue files) opens.
+        let old = dir.join("old.json");
+        std::fs::write(&old, serde_json::to_string(&Settings { strobe: false, ..Settings::default() }).unwrap()).unwrap();
+        assert!(!load_venue_file(&old).unwrap().strobe);
+        // Anything else, or a newer format, is refused with a reason.
+        let other = dir.join("other_nocvenue.json");
+        std::fs::write(&other, r#"{"hello": 1}"#).unwrap();
+        assert!(format!("{:#}", load_venue_file(&other).unwrap_err()).contains("not a Noctiluca venue"));
+        std::fs::write(&other, r#"{"format": "noctiluca-venue", "version": 99, "settings": {}}"#).unwrap();
+        assert!(format!("{:#}", load_venue_file(&other).unwrap_err()).contains("newer Noctiluca"));
+        std::fs::write(&other, "not json").unwrap();
+        assert!(load_venue_file(&other).is_err());
+    }
+
+    #[test]
+    fn venue_files_rename_trash_and_migrate() {
+        let dir = scratch("venue-files");
+        let home = save_venue_file(&venue_path_in(&dir, "בית"), &Settings::default()).unwrap();
+        let club = save_venue_file(&venue_path_in(&dir, "Club"), &Settings::default()).unwrap();
+        // Rename: not over another; the file keeps its suffix.
+        assert!(rename_venue_file(&home, "Club").is_err());
+        let home = rename_venue_file(&home, "Home").unwrap();
+        assert_eq!(home.file_name().unwrap(), "Home_nocvenue.json");
+        assert_eq!(venues_in(&dir), vec![club.clone(), home.clone()]);
+        // Delete goes to a trash folder, twice under one name too.
+        let trash = dir.join("Trash");
+        trash_in(&trash, &club).unwrap();
+        let again = save_venue_file(&venue_path_in(&dir, "Club"), &Settings::default()).unwrap();
+        trash_in(&trash, &again).unwrap();
+        assert_eq!(venues_in(&dir), vec![home]);
+        assert_eq!(std::fs::read_dir(&trash).unwrap().count(), 2);
+        // Old venues (app folder, "<name>.json") move to the library once.
+        let app = dir.join("app");
+        std::fs::create_dir_all(app.join("venues")).unwrap();
+        std::fs::write(app.join("venues/Barby.json"), serde_json::to_string(&Settings { variety: 0.3, ..Settings::default() }).unwrap()).unwrap();
+        let lib = dir.join("lib");
+        assert_eq!(migrate_old_venues(&app, &lib), 1);
+        let moved = venue_path_in(&lib, "Barby");
+        assert_eq!(load_venue_file(&moved).unwrap().variety, 0.3);
+        assert!(!app.join("venues").exists());
+        // Settings that named it the old way now point at its file.
+        let mut s = Settings { last_venue: Some("Barby".into()), recent_venues: vec![dir.join("gone_nocvenue.json")], ..Settings::default() };
+        s.adopt_venue_files(&lib);
+        assert_eq!(s.venue_file.as_deref(), Some(moved.as_path()));
+        assert_eq!(s.recent_venues, vec![moved]);
     }
 
     #[test]
