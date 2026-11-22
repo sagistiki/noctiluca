@@ -258,7 +258,7 @@ fn inspector_panel(ui: &mut Ui, settings: &mut Settings, live: &Live, pages: &mu
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| match pages.live_tab {
             Tab::Look => look_tab(ui, settings, live),
             Tab::Sound => sound_tab(ui, settings, live, actions),
-            Tab::Outputs => outputs_tab(ui, settings, live),
+            Tab::Outputs => outputs_tab(ui, settings, live, actions),
         });
     });
 }
@@ -386,7 +386,7 @@ fn sound_tab(ui: &mut Ui, settings: &mut Settings, live: &Live, actions: &mut Ve
     ui.label(style::muted("Watch the meter above: green most of the time, amber on the loudest kicks."));
 }
 
-fn outputs_tab(ui: &mut Ui, settings: &mut Settings, live: &Live) {
+fn outputs_tab(ui: &mut Ui, settings: &mut Settings, live: &Live, actions: &mut Vec<UiAction>) {
     style::label(ui, "Screens");
     if settings.output.outputs.is_empty() {
         ui.label(style::muted("No outputs"));
@@ -414,13 +414,16 @@ fn outputs_tab(ui: &mut Ui, settings: &mut Settings, live: &Live) {
     style::separator(ui);
     style::label(ui, "Lights");
     let (dot, text) = match &live.dmx {
-        Some(d) if d.sending => (style::GREEN, format!("{} · {:.0} frames/s", d.kind.unwrap_or("DMX"), d.rate)),
-        Some(d) => (style::AMBER, d.error.clone().unwrap_or_else(|| "Looking for the interface…".into())),
         None => (style::TERTIARY, "Off".into()),
+        d => super::lights_page::dmx_state(d.as_ref(), false),
     };
+    let healthy = live.dmx.as_ref().is_some_and(|d| d.sending && !d.stalled);
     ui.horizontal(|ui| {
         style::dot(ui, dot);
         ui.label(RichText::new(text).size(12.5));
+        if live.dmx.is_some() && !healthy && super::icons::small(ui, super::icons::Icon::Refresh, "Reconnect the lights' interface", style::MUTED).clicked() {
+            actions.push(UiAction::LightsReconnect);
+        }
     });
     let effect = match settings.lighting.effect {
         Some(e) => format!("{} (locked)", e.name()),

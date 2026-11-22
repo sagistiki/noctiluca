@@ -58,6 +58,21 @@ pub struct DmxLive {
     /// Frames a second lately.
     pub rate: f32,
     pub error: Option<String>,
+    /// Meant to be sending, but nothing has gone out for a while.
+    pub stalled: bool,
+}
+
+/// The interface's state as a dot and a line, for this page and Live.
+pub fn dmx_state(d: Option<&DmxLive>, with_port: bool) -> (egui::Color32, String) {
+    match d {
+        Some(d) if d.stalled => (style::RED, "The interface stopped answering · reconnecting…".into()),
+        Some(d) if d.sending => {
+            let port = d.port.as_deref().filter(|_| with_port).map(|p| format!(" · {}", crate::dmx::short_name(p))).unwrap_or_default();
+            (style::GREEN, format!("{}{port} · {:.0} frames/s", d.kind.unwrap_or("DMX"), d.rate))
+        }
+        Some(d) => (style::RED, d.error.clone().unwrap_or_else(|| "Looking for the interface…".into())),
+        None => (style::MUTED, "DMX is not running".into()),
+    }
 }
 
 pub(super) fn rgb(c: [f32; 3]) -> Color32 {
@@ -121,7 +136,7 @@ pub fn draw(ui: &mut Ui, area: Rect, settings: &mut Settings, live: &Live, state
         egui::ScrollArea::vertical().id_salt("lights left").auto_shrink([false, false]).show(ui, |ui| {
             let w = left.width();
             ui.set_width(w);
-            card(ui, w, |ui, inner| master(ui, inner, l, live));
+            card(ui, w, |ui, inner| master(ui, inner, l, live, actions));
             ui.add_space(style::GAP);
             card(ui, w, |ui, inner| effects(ui, inner, l, live));
             ui.add_space(style::GAP);
@@ -156,16 +171,12 @@ fn card(ui: &mut Ui, width: f32, add: impl FnOnce(&mut Ui, f32)) {
 }
 
 /// The interface, and the controls over every light.
-fn master(ui: &mut Ui, width: f32, l: &mut Lighting, live: &Live) {
+fn master(ui: &mut Ui, width: f32, l: &mut Lighting, live: &Live, actions: &mut Vec<UiAction>) {
     widgets::card_header(ui, "Interface", |ui| {
-        let (dot, text) = match &live.dmx {
-            Some(d) if d.sending => (style::GREEN, format!("{} · {} · {:.0} frames/s", d.kind.unwrap_or("DMX"), d.port.as_deref().map(crate::dmx::short_name).unwrap_or(""), d.rate)),
-            Some(d) => (style::RED, d.error.clone().unwrap_or_else(|| "Looking for the interface…".into())),
-            None => (style::MUTED, "DMX is not running".into()),
-        };
-        style::dot(ui, dot);
-        ui.label(style::semibold(text, 13.0));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            if icons::small(ui, Icon::Refresh, "Reconnect the interface", style::MUTED).clicked() {
+                actions.push(UiAction::LightsReconnect);
+            }
             let ports = &live.dmx_ports;
             let shown = l.port.as_deref().map(crate::dmx::short_name).unwrap_or("Automatic").to_string();
             egui::ComboBox::from_id_salt("dmx port").selected_text(shown).width(170.0).show_ui(ui, |ui| {
@@ -178,6 +189,13 @@ fn master(ui: &mut Ui, width: f32, l: &mut Lighting, live: &Live) {
             icons::paint(ui, r, Icon::Plug, style::MUTED);
         });
     });
+    // The state on its own line: an error can be long.
+    let (dot, text) = dmx_state(live.dmx.as_ref(), true);
+    ui.horizontal(|ui| {
+        style::dot(ui, dot);
+        ui.add(egui::Label::new(style::semibold(text, 13.0)).wrap());
+    });
+    ui.add_space(6.0);
     // Three switches as pads, then the two amounts.
     let gap = 8.0;
     let pad_w = 86.0_f32.min(PAD_MAX);

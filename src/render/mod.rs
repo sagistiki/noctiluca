@@ -98,6 +98,8 @@ struct GpuModel {
     vertices: wgpu::Buffer,
     indices: wgpu::Buffer,
     count: u32,
+    /// The stretches of `indices` for each named part (see model::Model).
+    parts: Vec<Vec<std::ops::Range<u32>>>,
 }
 
 /// Every off-screen picture, plus the bind groups for the passes that read two at once.
@@ -736,6 +738,7 @@ impl Renderer {
                     view_proj: view_proj.to_cols_array_2d(),
                     eye: camera.eye.extend(1.0).into(),
                     params: [*material as f32, placed.body, placed.glow, placed.sparkle],
+                    extra: [placed.sway, placed.sway_hz, placed.paint, 0.0],
                 };
                 gpu.queue
                     .write_buffer(&v.object_bufs[slot], 0, bytemuck::bytes_of(&data));
@@ -772,11 +775,20 @@ impl Renderer {
             rp.set_pipeline(&p.object_backdrop); // the scene first, as the backdrop
             rp.draw(0..3, 0..1);
             rp.set_pipeline(&p.object);
-            for (slot, (model, ..)) in drawable.iter().enumerate() {
+            for (slot, (model, placed, _)) in drawable.iter().enumerate() {
                 rp.set_bind_group(2, &v.object_binds[slot], &[]);
                 rp.set_vertex_buffer(0, model.vertices.slice(..));
                 rp.set_index_buffer(model.indices.slice(..), wgpu::IndexFormat::Uint32);
-                rp.draw_indexed(0..model.count, 0, 0..1);
+                // A copy draws the whole model, or one of its parts (a card
+                // of the fan, one wing), which may be missing: then nothing.
+                match placed.part {
+                    0 => rp.draw_indexed(0..model.count, 0, 0..1),
+                    k => {
+                        for range in model.parts.get(k as usize - 1).into_iter().flatten() {
+                            rp.draw_indexed(range.clone(), 0, 0..1);
+                        }
+                    }
+                }
             }
         }
         // The atmosphere: the outgoing one fading out as the incoming one
@@ -948,6 +960,7 @@ impl Gpu {
             ),
             indices: make(bytemuck::cast_slice(&m.indices), wgpu::BufferUsages::INDEX),
             count: m.indices.len() as u32,
+            parts: m.parts.clone(),
         }
     }
 

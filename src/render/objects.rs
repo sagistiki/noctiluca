@@ -27,6 +27,9 @@ pub struct ObjectUniforms {
     pub eye: [f32; 4],
     /// [material (0 chrome, 1 glass), body light, glow strength, sparkle]
     pub params: [f32; 4],
+    /// [how far parts sway or flap, how fast (per second), paint pattern,
+    /// unused]; see `Placed`.
+    pub extra: [f32; 4],
 }
 
 /// The camera moves, a little: it drifts around in the groove, pushes in
@@ -155,6 +158,22 @@ pub struct Placed {
     pub glow: f32,
     /// How much single tiles twinkle with the hi-hats (the mirror ball).
     pub sparkle: f32,
+    /// Which part of the model to draw (its "pN_" in Blender); 0 for all.
+    pub part: u8,
+    /// How far its "_tail" and "_flex" parts sway, in model units, and how
+    /// many times a second.
+    pub sway: f32,
+    pub sway_hz: f32,
+    /// The pattern its "_paint" parts are painted in (see object.wgsl):
+    /// 0 a gradient, 1 koi spots, 2 one glossy colour, 3 a smiling face,
+    /// 4 an ornament (the hamsa).
+    pub paint: f32,
+}
+
+impl Default for Placed {
+    fn default() -> Self {
+        Self::plain(Mat4::IDENTITY)
+    }
 }
 
 impl Placed {
@@ -164,6 +183,10 @@ impl Placed {
             body: 1.0,
             glow: 1.0,
             sparkle: 0.0,
+            part: 0,
+            sway: 0.0,
+            sway_hz: 0.0,
+            paint: 0.0,
         }
     }
 }
@@ -171,7 +194,58 @@ impl Placed {
 /// Every copy of object `object` to draw this frame. Each object has its
 /// own composition: one huge head, a wall of skulls, a rain of prisms...
 pub fn placements(object: usize, u: &Uniforms, appear: f32) -> Vec<Placed> {
-    match OBJECTS.get(object).copied().unwrap_or("none") {
+    let name = OBJECTS.get(object).copied().unwrap_or("none");
+    let mut placed = compose(name, u, appear);
+    // The compositions made before frames of every shape fill a 16:9 frame;
+    // in a narrower one (a tall surface in Mapping) they shrink to fit its
+    // width rather than spill off its sides. The newer ones fit themselves.
+    if !FITS_ITSELF.contains(&name) {
+        let k = (aspect(u) / (16.0 / 9.0)).min(1.0);
+        if k < 1.0 {
+            let shrink = Mat4::from_scale(Vec3::splat(k));
+            for p in &mut placed {
+                p.at = shrink * p.at;
+            }
+        }
+    }
+    placed
+}
+
+/// Compositions that size and spread themselves to the frame they are in.
+const FITS_ITSELF: [&str; 19] = [
+    "teddy", "koi", "manta", "wings", "helmet", "lips", "cards", "dice", "chess", "hearts", "gyro",
+    "balloon_dog", "ducks", "smiley", "neon", "mobius", "nautilus", "cranes", "hamsa",
+];
+
+/// The frame's shape, width over height (16:9 until it is known).
+fn aspect(u: &Uniforms) -> f32 {
+    let (w, h) = (u.res_time[0], u.res_time[1]);
+    if w > 0.0 && h > 0.0 { (w / h).clamp(0.2, 5.0) } else { 16.0 / 9.0 }
+}
+
+/// How large to draw a model `w` by `h` (in model units: its longest side
+/// is 2) standing at depth `z`, so it spans `fill` of the frame across or
+/// up, whichever it meets first: a wide thing fills a wide frame's width, a
+/// tall one a tall frame's height, and neither ever spills out.
+fn fit(u: &Uniforms, z: f32, w: f32, h: f32, fill: f32) -> f32 {
+    let hh = half_height(z);
+    let hw = hh * aspect(u);
+    // A build-up pushes the camera in; allow for it, so what fills the
+    // frame does not spill out at the top of the build.
+    let push = 1.0 + 0.22 * u.state[2].clamp(0.0, 1.0);
+    (fill * 2.0 * hw / w).min(fill * 2.0 * hh / h) / push
+}
+
+/// For compositions of several copies laid out for 16:9: how far to spread
+/// them across (more in a wider frame), how much to shrink them (in a
+/// narrower one), and how far to spread them up (more in a taller one).
+fn spread(u: &Uniforms) -> (f32, f32, f32) {
+    let k = aspect(u) / (16.0 / 9.0);
+    (k, k.min(1.0), (1.0 / k).clamp(1.0, 1.8))
+}
+
+fn compose(name: &str, u: &Uniforms, appear: f32) -> Vec<Placed> {
+    match name {
         "none" => Vec::new(),
         "chain" => chains(u, appear).into_iter().map(Placed::plain).collect(),
         "mirrorball" => mirror_ball(u, appear),
@@ -197,7 +271,29 @@ pub fn placements(object: usize, u: &Uniforms, appear: f32) -> Vec<Placed> {
         "butterfly" => butterflies(u, appear),
         "cubes" => cube_swarm(u, appear),
         "astronaut" => astronaut(u, appear),
-        _ => vec![Placed::plain(placement(object, u, appear))],
+        "teddy" => teddy(u, appear),
+        "koi" => koi(u, appear),
+        "manta" => manta(u, appear),
+        "wings" => wings(u, appear),
+        "helmet" => helmet(u, appear),
+        "lips" => lips(u, appear),
+        "cards" => cards(u, appear),
+        "dice" => dice(u, appear),
+        "chess" => chess(u, appear),
+        "hearts" => balloon_hearts(u, appear),
+        "gyro" => gyro(u, appear),
+        "balloon_dog" => balloon_dog(u, appear),
+        "ducks" => ducks(u, appear),
+        "smiley" => smiley(u, appear),
+        "neon" => neon(u, appear),
+        "mobius" => mobius(u, appear),
+        "nautilus" => nautilus(u, appear),
+        "cranes" => cranes(u, appear),
+        "hamsa" => hamsa(u, appear),
+        _ => {
+            let object = OBJECTS.iter().position(|o| *o == name).unwrap_or(0);
+            vec![Placed::plain(placement(object, u, appear))]
+        }
     }
 }
 
@@ -229,6 +325,7 @@ fn mirror_ball(u: &Uniforms, appear: f32) -> Vec<Placed> {
         body: 1.0,
         glow: 1.0,
         sparkle: 1.0,
+        ..Placed::default()
     }]
 }
 
@@ -262,6 +359,7 @@ fn skull_wall(u: &Uniforms, appear: f32) -> Vec<Placed> {
                 body: 0.3 + 0.7 * lit,
                 glow: 1.0,
                 sparkle: 0.0,
+                ..Placed::default()
             }
         })
         .collect()
@@ -384,6 +482,7 @@ fn avenue(u: &Uniforms, appear: f32) -> Vec<Placed> {
                 body: 1.0,
                 glow,
                 sparkle: 0.0,
+                ..Placed::default()
             }
         })
         .collect()
@@ -414,6 +513,7 @@ fn speaker_wall(u: &Uniforms, appear: f32) -> Vec<Placed> {
                 body: 0.6,
                 glow,
                 sparkle: 0.0,
+                ..Placed::default()
             }
         })
         .collect()
@@ -463,6 +563,7 @@ fn crystal(u: &Uniforms, appear: f32) -> Vec<Placed> {
                 body: 1.0,
                 glow: 1.0,
                 sparkle: 0.0,
+                ..Placed::default()
             }
         })
         .collect()
@@ -485,6 +586,7 @@ fn planet(u: &Uniforms, appear: f32) -> Vec<Placed> {
         body: 1.0,
         glow: 0.22,
         sparkle: 0.0,
+        ..Placed::default()
     }]
 }
 
@@ -522,6 +624,7 @@ fn corridor(u: &Uniforms, appear: f32) -> Vec<Placed> {
                 body: (1.0 - 0.8 * far) * fade,
                 glow: glow * fade,
                 sparkle: 0.0,
+                ..Placed::default()
             }
         })
         .collect()
@@ -636,6 +739,7 @@ fn diamond_orbit(u: &Uniforms, appear: f32) -> Vec<Placed> {
         body: 0.7,
         glow: 1.0,
         sparkle: 0.4,
+        ..Placed::default()
     }];
     for i in 0..8 {
         let k = i as f32;
@@ -649,6 +753,7 @@ fn diamond_orbit(u: &Uniforms, appear: f32) -> Vec<Placed> {
             body: 0.8,
             glow: 1.0,
             sparkle: 0.3,
+            ..Placed::default()
         });
     }
     out
@@ -665,6 +770,7 @@ fn vinyl(u: &Uniforms, appear: f32) -> Vec<Placed> {
         body: 1.0,
         glow: 0.6 + 0.9 * u.beat[1],
         sparkle: 0.0,
+        ..Placed::default()
     }]
 }
 
@@ -689,6 +795,7 @@ fn jellyfish(u: &Uniforms, appear: f32) -> Vec<Placed> {
                 body: 0.9,
                 glow: 0.7 + 0.8 * pulse,
                 sparkle: 0.0,
+                ..Placed::default()
             }
         })
         .collect()
@@ -742,6 +849,7 @@ fn dna(u: &Uniforms, appear: f32) -> Vec<Placed> {
         body: 1.0,
         glow: 0.5 + 1.0 * (-4.0 * since).exp(),
         sparkle: 0.0,
+        ..Placed::default()
     }]
 }
 
@@ -770,6 +878,7 @@ fn butterflies(u: &Uniforms, appear: f32) -> Vec<Placed> {
                 body: 1.0,
                 glow: 0.8 + 0.7 * u.beat[1],
                 sparkle: 0.0,
+                ..Placed::default()
             }
         })
         .collect()
@@ -801,6 +910,391 @@ fn astronaut(u: &Uniforms, appear: f32) -> Vec<Placed> {
     let turn = Quat::from_rotation_z(0.35 * (level * 0.05).sin() + 0.2) * Quat::from_rotation_y(mid * 0.08 + 0.6) * Quat::from_rotation_x(0.25 * (level * 0.07).sin());
     let drift = Vec3::new(0.35 * (level * 0.04).sin(), 0.15 * (level * 0.06).cos(), 0.0);
     vec![Placed::plain(at(drift, turn, Vec3::splat(scale)))]
+}
+
+/// A teddy bear afloat like the astronaut, in glossy paint the colour of
+/// the palette, turning slowly and bobbing with the bass.
+fn teddy(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [bass, mid, level, _] = u.flow;
+    let scale = fit(u, 0.0, 1.46, 2.0, 0.7) * appear.clamp(0.0, 1.0) * (1.0 + 0.03 * u.beat[1]);
+    let turn = Quat::from_rotation_y(0.5 * (mid * 0.06).sin() - 0.2) * Quat::from_rotation_z(0.1 * (level * 0.05).sin());
+    let drift = Vec3::new(0.25 * (level * 0.04).sin(), 0.08 * (bass * 0.5).sin() + 0.05 * u.beat[1], 0.0);
+    vec![Placed {
+        paint: 0.0,
+        ..Placed::plain(at(drift, turn, Vec3::splat(scale)))
+    }]
+}
+
+/// The beats per second, for motions that keep time (a tail's stroke).
+fn beat_hz(u: &Uniforms) -> f32 {
+    (u.beat[3].clamp(60.0, 200.0)) / 60.0
+}
+
+/// Two koi circling each other, seen from above like yin and yang, their
+/// markings painted in the palette and their tails beating in time.
+fn koi(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let level = u.flow[2];
+    let a = appear.clamp(0.0, 1.0);
+    let (sx, size, sy) = spread(u);
+    (0..2)
+        .map(|n| {
+            let ang = level * 0.12 + n as f32 * PI;
+            let pos = Vec3::new(0.9 * sx.min(1.6) * ang.cos(), 0.62 * sy * ang.sin(), -0.25);
+            // Head first along the circle (the model's head is to -X).
+            let heading = ang - PI / 2.0;
+            let turn = Quat::from_rotation_z(heading) * Quat::from_rotation_x(PI / 2.0);
+            Placed {
+                paint: 1.0,
+                sway: 0.2,
+                sway_hz: beat_hz(u) * 0.5,
+                ..Placed::plain(at(pos, turn, Vec3::splat(0.95 * size * a)))
+            }
+        })
+        .collect()
+}
+
+/// A manta ray seen from below as it glides up through the frame, banking
+/// slowly, its wings flapping.
+fn manta(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = fit(u, -0.3, 1.9, 1.7, 0.8) * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_z(0.25 * (level * 0.05).sin()) * Quat::from_rotation_y(0.3 * (mid * 0.04).sin()) * Quat::from_rotation_x(1.15);
+    let pos = Vec3::new(0.6 * (level * 0.03).sin(), 0.15 + 0.1 * (level * 0.05).cos(), -0.3);
+    vec![Placed {
+        sway: 0.22,
+        sway_hz: 0.3,
+        ..Placed::plain(at(pos, turn, Vec3::splat(scale)))
+    }]
+}
+
+/// A pair of angel wings, folded back in the groove, opening through a
+/// build-up, spread wide on the drop; each beats a little on the kick.
+fn wings(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let mid = u.flow[1];
+    let a = appear.clamp(0.0, 1.0);
+    let tension = u.state[2].clamp(0.0, 1.0);
+    let after_drop = (-u.stage[1] * 0.4).exp();
+    let open = (0.3 + 0.55 * tension + 0.7 * after_drop).min(1.0);
+    let fold = 1.15 * (1.0 - open) + 0.08 * u.beat[1];
+    // Wide as they are, they spread across the frame, whatever its shape.
+    let body = at(Vec3::new(0.0, 0.0, -0.3), Quat::from_rotation_y(0.15 * (mid * 0.08).sin()), Vec3::splat(fit(u, -0.3, 2.0, 0.59, 0.84) * a));
+    // Each wing turns about a hinge at its root, folding away from the room.
+    [(1u8, -1.0f32), (2, 1.0)]
+        .into_iter()
+        .map(|(part, side)| {
+            let hinge = Vec3::new(0.08 * side, 0.35, 0.0);
+            let wing = Mat4::from_translation(hinge) * Mat4::from_quat(Quat::from_rotation_y(fold * side)) * Mat4::from_translation(-hinge);
+            Placed {
+                part,
+                glow: 0.8 + 0.6 * u.beat[1],
+                ..Placed::plain(body * wing)
+            }
+        })
+        .collect()
+}
+
+/// A chrome helmet turning slowly, its visor a screen showing the music's
+/// spectrum.
+fn helmet(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = fit(u, 0.0, 2.0, 1.94, 0.72) * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_y(0.55 * (mid * 0.05).sin()) * Quat::from_rotation_x(-0.22 + 0.08 * (level * 0.07).sin());
+    vec![Placed {
+        glow: 1.0 + 0.4 * u.beat[1],
+        ..Placed::plain(at(Vec3::new(0.0, 0.05, 0.0), turn, Vec3::splat(scale)))
+    }]
+}
+
+/// Pop-art lips, glossy in the palette's colour, turned a little toward
+/// the room: closed at rest, parting just a little on the hi-hats and the
+/// kick. The model is wider than real lips, so they are drawn a little
+/// narrower and fuller.
+fn lips(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let mid = u.flow[1];
+    let a = appear.clamp(0.0, 1.0);
+    let size = Vec3::new(1.2, 1.6, 1.4) * a * fit(u, 0.0, 2.4, 1.33, 0.75);
+    let turn = Quat::from_rotation_y(0.3 * (mid * 0.06).sin()) * Quat::from_rotation_x(0.05);
+    let part = 0.012 * u.bands[3].clamp(0.0, 1.0) + 0.014 * u.beat[1];
+    [(1u8, 1.0f32), (2, -1.0)]
+        .into_iter()
+        .map(|(n, side)| Placed {
+            part: n,
+            paint: 2.0,
+            // Raised a little, so a wet floor's reflection stays clear of the lower lip.
+            ..Placed::plain(at(Vec3::new(0.0, (0.15 + part * side) * size.y, 0.0), turn, size))
+        })
+        .collect()
+}
+
+/// How far past the last drop we are, 1 right on it, fading over a few
+/// seconds.
+fn after_drop(u: &Uniforms, secs: f32) -> f32 {
+    (-u.stage[1].max(0.0) / secs).exp()
+}
+
+/// Five playing cards held in a fan, turning a little; every bar one of
+/// them spins round on its own, and on a drop the fan opens wide.
+fn cards(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let mid = u.flow[1];
+    let beats = u.flow[3];
+    let a = appear.clamp(0.0, 1.0);
+    let spread = 1.0 + 0.7 * after_drop(u, 2.0);
+    let base = at(Vec3::new(0.0, 0.2, 0.0), Quat::from_rotation_y(0.3 * (mid * 0.05).sin()), Vec3::splat(fit(u, 0.0, 2.9, 2.5, 0.85) * a));
+    let turn = (beats / 4.0).floor();
+    let flipping = turn.rem_euclid(5.0) as usize;
+    let f = ((beats / 4.0).fract() * 4.0).min(1.0);
+    let spin = TAU * f * f * (3.0 - 2.0 * f);
+    // The fan turns about a point below the cards, as in a hand.
+    let pivot = Vec3::new(0.0, -1.3, 0.0);
+    (0..5)
+        .map(|i| {
+            let angle = (i as f32 - 2.0) * 0.24 * spread;
+            let mut card = base
+                * Mat4::from_translation(pivot)
+                * Mat4::from_quat(Quat::from_rotation_z(-angle))
+                * Mat4::from_translation(-pivot + Vec3::new(0.0, 0.0, i as f32 * 0.03));
+            if i == flipping {
+                card *= Mat4::from_quat(Quat::from_rotation_y(spin));
+            }
+            Placed {
+                part: i as u8 + 1,
+                glow: 0.8 + 0.6 * u.beat[1],
+                ..Placed::plain(card)
+            }
+        })
+        .collect()
+}
+
+/// Two dice tumbling slowly in the air; each drop throws them, and they
+/// settle on new faces.
+fn dice(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let level = u.flow[2];
+    let a = appear.clamp(0.0, 1.0);
+    let thrown = after_drop(u, 1.2);
+    let drops = u.stage[0];
+    let (sx, size, sy) = spread(u);
+    [(Vec3::new(-0.8 * sx.min(1.5), -0.1 * sy, 0.0), 0.0f32), (Vec3::new(0.85 * sx.min(1.5), 0.3 * sy, -0.5), 1.0)]
+        .into_iter()
+        .map(|(pos, n)| {
+            // Which face is up: a new quarter turn or two at every drop.
+            let k = drops + n * 3.0;
+            let face = Quat::from_euler(glam::EulerRot::XYZ, (k * 1.0).floor() * PI / 2.0, (k * 1.7).floor() * PI / 2.0, 0.0);
+            let tumble = Quat::from_rotation_y(level * 0.12 + n) * Quat::from_rotation_x(0.35 * (level * 0.09 + n).sin());
+            let throw = Quat::from_rotation_x(TAU * thrown * 1.5) * Quat::from_rotation_z(PI * thrown);
+            Placed {
+                glow: 0.8 + 0.6 * u.beat[1],
+                ..Placed::plain(at(pos, tumble * throw * face, Vec3::splat(0.55 * size * a)))
+            }
+        })
+        .collect()
+}
+
+/// A chess king and queen, big, facing each other and turning slowly the
+/// opposite ways; their collars glow with the kick.
+fn chess(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let mid = u.flow[1];
+    let a = appear.clamp(0.0, 1.0);
+    let (sx, size, _) = spread(u);
+    [(1u8, -0.85 * sx.min(1.5)), (2, 0.85 * sx.min(1.5))]
+        .into_iter()
+        .map(|(part, x)| {
+            let turn = Quat::from_rotation_y(mid * 0.1 * x.signum());
+            Placed {
+                part,
+                glow: 0.25 + 0.35 * u.beat[1],
+                ..Placed::plain(at(Vec3::new(x, -0.05, 0.0), turn, Vec3::splat(0.85 * size * a)))
+            }
+        })
+        .collect()
+}
+
+/// Five balloon hearts in glossy paint rising slowly at different depths,
+/// each beating on the kick.
+fn balloon_hearts(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let a = appear.clamp(0.0, 1.0);
+    let beat = 1.0 + 0.08 * u.beat[1];
+    let (sx, fit_size, _) = spread(u);
+    (0..5)
+        .map(|n| {
+            let k = n as f32;
+            let z = -0.2 - 1.4 * rand(k, 1.0);
+            let span = half_height(z) * 2.0 + 1.6;
+            // Spread round the loop, so some are always in view.
+            let rise = (level * (0.05 + 0.02 * rand(k, 2.0)) + k / 5.0 * span).rem_euclid(span);
+            let pos = Vec3::new(((k - 2.0) * 0.95 + 0.2 * (mid * 0.1 + k).sin()) * sx, rise - span / 2.0, z);
+            let turn = Quat::from_rotation_y(0.5 * (mid * 0.07 + k * 2.0).sin()) * Quat::from_rotation_z(0.15 * (level * 0.2 + k).sin());
+            let size = (0.55 + 0.2 * rand(k, 4.0)) * a * beat * fit_size;
+            Placed {
+                paint: 2.0,
+                ..Placed::plain(at(pos, turn, Vec3::splat(size)))
+            }
+        })
+        .collect()
+}
+
+/// A gyroscope: three rings, each held in the one outside it and turning
+/// on its own axis, faster with the bass, about a core that glows.
+fn gyro(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let bass = u.flow[0];
+    let a = appear.clamp(0.0, 1.0);
+    let base = at(Vec3::new(0.0, 0.05, 0.0), Quat::from_rotation_x(0.2), Vec3::splat(fit(u, 0.0, 2.0, 2.0, 0.66) * a));
+    let outer = Quat::from_rotation_y(bass * 0.35);
+    let middle = outer * Quat::from_rotation_x(bass * 0.5);
+    let inner = middle * Quat::from_rotation_y(bass * 0.8);
+    let core = Mat4::from_scale(Vec3::splat(1.0 + 0.25 * u.beat[1]));
+    // The rings' lines of light stay fine; the core is what shines.
+    let lines = 0.25 + 0.2 * u.beat[1];
+    vec![
+        Placed { part: 1, glow: lines, ..Placed::plain(base * Mat4::from_quat(outer)) },
+        Placed { part: 2, glow: lines, ..Placed::plain(base * Mat4::from_quat(middle)) },
+        Placed { part: 3, glow: lines, ..Placed::plain(base * Mat4::from_quat(inner)) },
+        Placed { part: 4, glow: 0.45 + 0.35 * u.beat[1], ..Placed::plain(base * core) },
+    ]
+}
+
+/// A balloon dog in glossy paint, turning slowly to show itself off; it
+/// swells a little on the kick, as if blown up a breath more.
+fn balloon_dog(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = fit(u, 0.0, 2.0, 1.72, 0.66) * appear.clamp(0.0, 1.0) * (1.0 + 0.04 * u.beat[1]);
+    let turn = Quat::from_rotation_y(mid * 0.12 + 0.4) * Quat::from_rotation_x(0.12);
+    let drift = Vec3::new(0.0, -0.05 + 0.05 * (level * 0.06).sin(), 0.0);
+    vec![Placed {
+        paint: 2.0,
+        ..Placed::plain(at(drift, turn, Vec3::splat(scale)))
+    }]
+}
+
+/// Five rubber ducks bobbing round in a ring, as on a bath.
+fn ducks(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let level = u.flow[2];
+    let t = u.res_time[2];
+    let a = appear.clamp(0.0, 1.0);
+    let (sx, size, _) = spread(u);
+    (0..5)
+        .map(|n| {
+            let k = n as f32;
+            let ang = level * 0.1 + k / 5.0 * TAU;
+            let pos = Vec3::new(1.35 * sx.min(1.6) * ang.cos(), -0.45 + 0.05 * (t * 2.5 + k * 1.3).sin(), 1.0 * ang.sin() - 0.5);
+            // Facing the way it is going round the ring (the model faces +X).
+            let heading = (-ang.cos()).atan2(-ang.sin());
+            let bob = Quat::from_rotation_z(0.12 * (t * 2.5 + k).sin());
+            Placed {
+                paint: 2.0,
+                glow: 0.6 + 0.4 * u.beat[1],
+                ..Placed::plain(at(pos, Quat::from_rotation_y(heading) * bob, Vec3::splat(0.5 * size * a)))
+            }
+        })
+        .collect()
+}
+
+/// The rave smiley: a ball rolling slowly, which turns its face to the room
+/// on every drop.
+fn smiley(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = fit(u, 0.0, 2.0, 2.0, 0.6) * appear.clamp(0.0, 1.0) * (1.0 + 0.04 * u.beat[1]);
+    let rolling = Quat::from_rotation_y(mid * 0.2) * Quat::from_rotation_x(0.6 * (level * 0.07).sin());
+    let facing = Quat::from_rotation_y(0.15 * (mid * 0.3).sin());
+    let turn = rolling.slerp(facing, after_drop(u, 3.0));
+    vec![Placed {
+        paint: 3.0,
+        ..Placed::plain(at(Vec3::new(0.0, 0.05, 0.0), turn, Vec3::splat(scale)))
+    }]
+}
+
+/// Three neon signs (an arrow, a bolt, a star) hanging at different
+/// depths, swinging a little; their tubes glow brighter on the kick.
+fn neon(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let level = u.flow[2];
+    let a = appear.clamp(0.0, 1.0);
+    let (sx, size, sy) = spread(u);
+    // Side by side in a wide frame; in a tall one they stack instead.
+    let tall = sy > 1.2;
+    let spots = if tall {
+        [Vec3::new(0.0, 1.3, -0.9), Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, -1.25, -0.6)]
+    } else {
+        [Vec3::new(-1.35 * sx.min(1.6), 0.55, -0.9), Vec3::new(0.1, -0.05, 0.0), Vec3::new(1.35 * sx.min(1.6), 0.45, -0.6)]
+    };
+    let size = if tall { size * 1.6 } else { size };
+    [(1u8, spots[0]), (2, spots[1]), (3, spots[2])]
+        .into_iter()
+        .map(|(part, pos)| {
+            let k = part as f32;
+            let swing = Quat::from_rotation_y(0.3 * (level * 0.05 + k).sin()) * Quat::from_rotation_z(0.05 * (level * 0.08 + k * 2.0).sin());
+            Placed {
+                part,
+                glow: 0.65 + 0.55 * u.beat[1],
+                ..Placed::plain(at(pos, swing, Vec3::splat(0.6 * size * a)))
+            }
+        })
+        .collect()
+}
+
+/// A Möbius strip in chrome, tilted toward the room and turning slowly; a
+/// light runs round its middle on the beat.
+fn mobius(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = fit(u, 0.0, 2.0, 1.45, 0.7) * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_x(0.95 + 0.1 * (level * 0.05).sin()) * Quat::from_rotation_y(mid * 0.08);
+    vec![Placed {
+        glow: 0.8 + 0.5 * u.beat[1],
+        ..Placed::plain(at(Vec3::new(0.0, 0.05, 0.0), turn, Vec3::splat(scale)))
+    }]
+}
+
+/// A nautilus shell turning slowly in the water, the seams between its
+/// chambers glowing on the kick.
+fn nautilus(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = fit(u, 0.0, 2.0, 1.66, 0.68) * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_y(0.6 * (mid * 0.05).sin()) * Quat::from_rotation_z(0.15 * (level * 0.04).sin());
+    let drift = Vec3::new(0.0, 0.05 * (level * 0.06).sin(), 0.0);
+    vec![Placed {
+        glow: 0.5 + 0.6 * u.beat[1],
+        ..Placed::plain(at(drift, turn, Vec3::splat(scale)))
+    }]
+}
+
+/// A small flock of origami cranes in palette paint flying through the
+/// frame, seen from a little above, their wings beating.
+fn cranes(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let level = u.flow[2];
+    let a = appear.clamp(0.0, 1.0);
+    let (sx, size, sy) = spread(u);
+    let (ax, ay) = (2.8 * sx, 1.2 * sy);
+    (0..6)
+        .map(|n| {
+            let k = n as f32;
+            let s = level * (0.08 + 0.04 * rand(k, 1.0)) + rand(k, 2.0) * TAU;
+            let (fx, fy) = (0.6 + 0.3 * rand(k, 5.0), 1.0 + 0.4 * rand(k, 6.0));
+            let pos = Vec3::new(ax * (s * fx).sin(), ay * (s * fy + k).sin(), -1.0 + 1.3 * rand(k, 7.0));
+            let (vx, vy) = (ax * fx * (s * fx).cos(), ay * fy * (s * fy + k).cos());
+            // From above, head first along its path (the model's head is to -Z).
+            let turn = Quat::from_rotation_z(vy.atan2(vx) - PI / 2.0) * Quat::from_rotation_x(PI / 2.0 - 0.4);
+            Placed {
+                paint: 2.0,
+                sway: 0.28,
+                sway_hz: 1.1 + 0.4 * rand(k, 3.0),
+                ..Placed::plain(at(pos, turn, Vec3::splat((0.62 + 0.16 * rand(k, 4.0)) * size * a)))
+            }
+        })
+        .collect()
+}
+
+/// A hamsa floating and turning a little: Noctiluca's own design
+/// (blender/design_hamsa.py), its lines raised in chrome over a body
+/// lacquered in the palette's most vivid colour, the eye glowing on the kick.
+fn hamsa(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = fit(u, 0.0, 1.44, 2.0, 0.72) * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_y(0.45 * (mid * 0.05).sin()) * Quat::from_rotation_x(0.06 * (level * 0.07).sin());
+    let drift = Vec3::new(0.0, 0.08 * (level * 0.05).sin(), 0.0);
+    vec![Placed {
+        glow: 0.45 + 0.45 * u.beat[1],
+        paint: 2.0,
+        ..Placed::plain(at(drift, turn, Vec3::splat(scale)))
+    }]
 }
 
 #[cfg(test)]
@@ -846,6 +1340,33 @@ mod tests {
 
     fn on_screen(p: Vec3) -> bool {
         p.x.abs() <= 1.0 && p.y.abs() <= 1.0 && (0.0..1.0).contains(&p.z)
+    }
+
+    #[test]
+    fn the_new_objects_fit_frames_of_every_shape() {
+        // A wide screen, a 16:9 one, a square, and a tall surface in Mapping:
+        // the self-fitting objects stay inside, near enough, every time.
+        for (w, h) in [(2560.0, 720.0), (1280.0, 720.0), (800.0, 800.0), (720.0, 1280.0)] {
+            let mut u = uniforms(5.0, 0.5, 0.5);
+            u.res_time[0] = w;
+            u.res_time[1] = h;
+            let vp = view_proj(w / h);
+            for name in FITS_ITSELF {
+                // Flocks fly in and out of the frame on purpose.
+                if ["cranes", "hearts"].contains(&name) {
+                    continue;
+                }
+                let object = OBJECTS.iter().position(|o| *o == name).unwrap();
+                for p in placements(object, &u, 1.0) {
+                    let centre = vp.project_point3(p.at.transform_point3(Vec3::ZERO));
+                    assert!(centre.x.abs() < 1.0 && centre.y.abs() < 1.0, "{name} in {w}x{h}: {centre}");
+                    // Its widest reach (a model's half-size is about 1).
+                    let edge = vp.project_point3(p.at.transform_point3(Vec3::X));
+                    let reach = (edge - centre).truncate().length() + centre.truncate().length();
+                    assert!(reach < 1.35, "{name} in {w}x{h} reaches {reach}");
+                }
+            }
+        }
     }
 
     #[test]

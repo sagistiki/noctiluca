@@ -16,7 +16,9 @@ fn sea_ramp(k: f32) -> vec3f {
     let lum = vec3f(0.3, 0.59, 0.11);
     let light_at_half = dot(pal(0.5), lum) >= dot(pal(0.0), lum);
     let t = select(0.5 * k1, 0.5 * (1.0 - k1), light_at_half);
-    return pal(t) * (1.0 - 0.85 * smoothstep(0.8, 1.0, k1));
+    // The lightest band is the shore: warmed to sand.
+    let sand = mix(vec3f(1.0, 0.96, 0.86), vec3f(1.0), smoothstep(0.0, 0.3, k1));
+    return pal(t) * sand * (1.0 - 0.85 * smoothstep(0.8, 1.0, k1));
 }
 
 // Plankton: points of light in cells, each twinkling at its own pace.

@@ -40,12 +40,13 @@ float fbm3(vec2 p) {
 }
 // The Noctiluca palette (src/director.rs, PALETTES[12]).
 vec3 pal(float t) {
-  return clamp(vec3(0.575, 0.5, 0.375) + vec3(0.7, 0.475, 0.65) * cos(6.2831853 * (t + vec3(0.4, 0.49, 0.64))), 0.0, 1.0);
+  return clamp(vec3(0.10, 0.48, 0.96) + vec3(0.875, 0.475, 0.825) * cos(6.2831853 * (t + vec3(0.5))), 0.0, 1.0);
 }
 // Light end (0) to dark end (1); this palette is light at t = 0.5.
 vec3 seaRamp(float k) {
   float k1 = clamp(k, 0.0, 1.0);
-  return pal(0.5 * (1.0 - k1)) * (1.0 - 0.85 * smoothstep(0.8, 1.0, k1));
+  vec3 sand = mix(vec3(1.0, 0.96, 0.86), vec3(1.0), smoothstep(0.0, 0.3, k1));
+  return pal(0.5 * (1.0 - k1)) * sand * (1.0 - 0.85 * smoothstep(0.8, 1.0, k1));
 }
 float plankton(vec2 p, float scale, float density, float t) {
   vec2 g = p * scale, id = floor(g), f = fract(g) - 0.5;

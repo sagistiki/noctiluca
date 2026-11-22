@@ -54,6 +54,8 @@ pub struct Live {
     pub net_screens: Vec<NetScreen>,
     /// Per output: its network link, when its display is a network screen.
     pub net_links: Vec<Option<NetLink>>,
+    /// A search for the network screens has just started.
+    pub net_searching: bool,
     /// DMX: the interface, the ports there are, each light's colour now.
     pub dmx: Option<lights_page::DmxLive>,
     pub dmx_ports: Vec<String>,
@@ -132,6 +134,10 @@ pub enum UiAction {
     NetOpen(String),
     /// Use this network screen as an output's display (a new output if all are taken).
     NetUse(String),
+    /// Look for the network screens again from scratch.
+    NetSearch,
+    /// Start the lights' interface afresh (it stopped answering, or was swapped).
+    LightsReconnect,
     /// Flash light `i` white for a moment, to see which one it is.
     LightIdentify(usize),
     /// The show: a new look now; hold the look (or let go); the next palette.

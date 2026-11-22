@@ -62,6 +62,8 @@ pub enum Icon {
     BoltOff,
     Bolts,
     Warning,
+    /// Two arrows chasing round a circle: look again, reconnect.
+    Refresh,
 }
 
 /// Draws `icon` inside `rect` in `colour`.
@@ -193,6 +195,20 @@ pub fn paint(ui: &Ui, rect: Rect, icon: Icon, colour: Color32) {
             let bolt = |dx: f32| vec![at(0.1 + dx, -0.85), at(-0.4 + dx, 0.1), at(-0.02 + dx, 0.1), at(-0.12 + dx, 0.85), at(0.4 + dx, -0.12), at(0.02 + dx, -0.12)];
             p.add(poly(bolt(-0.32), true));
             p.add(poly(bolt(0.42), true));
+        }
+        Icon::Refresh => {
+            // Two arcs round a circle, each with its head chasing the other's
+            // tail (clockwise on screen).
+            for start in [-2.6_f32, 0.55] {
+                let end = start + 2.25;
+                p.add(Shape::line(arc(start, end, 0.62), line));
+                let tip_at = at(0.62 * end.cos(), 0.62 * end.sin());
+                let dir = Vec2::new(-end.sin(), end.cos());
+                let side = Vec2::new(-dir.y, dir.x);
+                let tip = tip_at + dir * s * 0.17;
+                let back = tip_at - dir * s * 0.12;
+                p.add(Shape::convex_polygon(vec![tip, back + side * s * 0.2, back - side * s * 0.2], colour, Stroke::NONE));
+            }
         }
         Icon::Warning => {
             p.add(poly(vec![at(0.0, -0.85), at(0.9, 0.75), at(-0.9, 0.75)], true));

@@ -37,6 +37,9 @@ pub struct Status {
     /// Pictures dropped on the Mac (the link was busy).
     pub dropped_here: u64,
     pub error: Option<String>,
+    /// Since when the link has been down (None while connected, and before
+    /// the first try has failed).
+    pub down_since: Option<Instant>,
 }
 
 /// From drawing a picture to sending it: reading it back from the GPU
@@ -164,6 +167,22 @@ fn set_error(shared: &Shared, e: impl ToString) {
     if let Ok(mut s) = shared.status.lock() {
         s.connected = false;
         s.error = Some(e.to_string());
+        s.down_since.get_or_insert_with(Instant::now);
+    }
+}
+
+/// What to tell the person when a session ends with `e`: a box that cannot
+/// be reached is said so plainly (it has usually left the Wi-Fi for a moment
+/// or come back at another address, and is being looked for again).
+pub fn describe(addr: SocketAddr, e: &anyhow::Error) -> String {
+    use std::io::ErrorKind::*;
+    let unreachable = e.downcast_ref::<std::io::Error>().is_some_and(|io| {
+        matches!(io.kind(), HostUnreachable | NetworkUnreachable | NetworkDown | ConnectionRefused | TimedOut | AddrNotAvailable)
+    });
+    if unreachable {
+        format!("The box is not answering at {}. Looking for it on the network…", addr.ip())
+    } else {
+        format!("{e:#}")
     }
 }
 
@@ -172,7 +191,7 @@ fn link(addr: SocketAddr, fps: u32, bitrate: u32, rx: Receiver<Picture>, shared:
     while !shared.stop.load(Ordering::Relaxed) {
         match session(addr, fps, bitrate, &rx, &shared) {
             Ok(()) => break,
-            Err(e) => set_error(&shared, format!("{e:#}")),
+            Err(e) => set_error(&shared, describe(addr, &e)),
         }
         // Wait a moment, throwing away what comes in meanwhile.
         let until = Instant::now() + Duration::from_secs(1);
@@ -195,6 +214,7 @@ fn session(addr: SocketAddr, fps: u32, bitrate: u32, rx: &Receiver<Picture>, sha
     if let Ok(mut s) = shared.status.lock() {
         s.connected = true;
         s.error = None;
+        s.down_since = None;
         s.stats = Stats::default();
     }
     // Answers from the screen, on their own thread.
@@ -292,6 +312,30 @@ fn session(addr: SocketAddr, fps: u32, bitrate: u32, rx: &Receiver<Picture>, sha
 mod tests {
     use super::*;
     use std::net::TcpListener;
+
+    #[test]
+    fn an_unreachable_box_is_said_plainly() {
+        let addr: SocketAddr = "192.168.1.40:7341".parse().unwrap();
+        let gone = anyhow::Error::from(std::io::Error::from(std::io::ErrorKind::HostUnreachable));
+        assert_eq!(describe(addr, &gone), "The box is not answering at 192.168.1.40. Looking for it on the network…");
+        let other = anyhow::anyhow!("the screen closed the connection");
+        assert_eq!(describe(addr, &other), "the screen closed the connection");
+    }
+
+    #[test]
+    fn a_link_that_cannot_connect_says_since_when() {
+        // A port nobody listens on: the box is not there.
+        let addr = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap();
+        let stream = ScreenStream::start(addr, 60, 2_000_000);
+        let until = Instant::now() + Duration::from_secs(5);
+        while stream.status().down_since.is_none() && Instant::now() < until {
+            thread::sleep(Duration::from_millis(20));
+        }
+        let status = stream.status();
+        assert!(!status.connected);
+        assert!(status.down_since.is_some());
+        assert!(status.error.unwrap().starts_with("The box is not answering at 127.0.0.1"));
+    }
 
     #[test]
     fn latency_follows_the_network_quickly_up_and_slowly_down() {

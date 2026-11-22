@@ -12,7 +12,9 @@
 //!
 //! A thread sends the latest universe 40 times a second; the show only
 //! changes values in memory. If the interface goes away it says so and
-//! opens it again when it is back.
+//! opens it again when it is back. An interface that stops answering
+//! without going away (a write that never returns) shows as stalled, and
+//! the program starts the sender afresh (see `Status::stalled`).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -23,6 +25,11 @@ use crate::lights::UNIVERSE;
 
 /// Frames a second (DMX allows up to 44 with 512 channels).
 const RATE: f64 = 40.0;
+/// No frame out for this long while sending: the interface has stopped
+/// answering.
+pub const STALLED: Duration = Duration::from_millis(1500);
+/// How often a session checks that its port is still there.
+const CHECK_PORT: Duration = Duration::from_secs(1);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -48,6 +55,20 @@ pub struct Status {
     pub sending: bool,
     pub frames: u64,
     pub error: Option<String>,
+    /// When the last frame went out (None before the first).
+    pub last_frame: Option<Instant>,
+}
+
+impl Status {
+    /// Meant to be sending, but no frame has gone out for a while: a write
+    /// is stuck on an interface that stopped answering.
+    pub fn stalled(&self) -> bool {
+        self.stalled_at(Instant::now())
+    }
+
+    fn stalled_at(&self, now: Instant) -> bool {
+        self.sending && self.last_frame.is_some_and(|t| now.saturating_duration_since(t) > STALLED)
+    }
 }
 
 /// The ports that look like USB-DMX interfaces (USB serial adapters).
@@ -163,13 +184,22 @@ fn session(shared: &Shared, port: &str, wanted: Option<&str>) -> anyhow::Result<
         serial.set_dmx_line()?;
     }
     set_status(shared, |s| {
-        *s = Status { port: Some(port.to_string()), kind: Some(kind), sending: true, frames: 0, error: None };
+        *s = Status { port: Some(port.to_string()), kind: Some(kind), sending: true, frames: 0, error: None, last_frame: Some(Instant::now()) };
     });
     let period = Duration::from_secs_f64(1.0 / RATE);
     let mut next = Instant::now();
+    let mut checked = Instant::now();
     loop {
         if shared.stop.load(Ordering::Relaxed) {
             return Ok(());
+        }
+        // Unplugged: some interfaces take writes into the void for a while
+        // before failing, so look for the port itself.
+        if checked.elapsed() >= CHECK_PORT {
+            checked = Instant::now();
+            if !std::path::Path::new(port).exists() {
+                anyhow::bail!("{} was unplugged", short_name(port));
+            }
         }
         let now_wanted = shared.wanted.lock().ok().and_then(|w| w.clone());
         if now_wanted.as_deref() != wanted && !(wanted.is_none() && now_wanted.as_deref() == Some(port)) {
@@ -180,7 +210,10 @@ fn session(shared: &Shared, port: &str, wanted: Option<&str>) -> anyhow::Result<
             Kind::Pro => serial.write_all(&pro_packet(&universe))?,
             Kind::Open => serial.send_open_frame(&universe)?,
         }
-        set_status(shared, |s| s.frames += 1);
+        set_status(shared, |s| {
+            s.frames += 1;
+            s.last_frame = Some(Instant::now());
+        });
         next += period;
         let now = Instant::now();
         if next > now {
@@ -330,6 +363,17 @@ mod tests {
         assert_eq!(&p[..6], &[0x7E, 6, 0x01, 0x02, 0, 255]);
         assert_eq!(p[516], 7);
         assert_eq!(p[517], 0xE7);
+    }
+
+    #[test]
+    fn a_sender_with_no_frame_lately_is_stalled() {
+        let now = Instant::now();
+        let sent = |ago_ms: u64, sending: bool| Status { sending, last_frame: now.checked_sub(Duration::from_millis(ago_ms)), ..Status::default() };
+        assert!(!sent(25, true).stalled_at(now));
+        assert!(sent(2000, true).stalled_at(now));
+        // Not meant to be sending (no interface, or between tries): not stalled.
+        assert!(!sent(2000, false).stalled_at(now));
+        assert!(!Status::default().stalled_at(now));
     }
 
     #[test]

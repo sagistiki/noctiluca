@@ -282,7 +282,7 @@ pub fn draw(
     toolbar_ui(ui, toolbar, settings, state);
     canvas_ui(ui, card, settings, live, preview, state);
     ui.scope_builder(egui::UiBuilder::new().max_rect(panel), |ui| {
-        panel_ui(ui, settings, live, state)
+        panel_ui(ui, settings, live, state, actions)
     });
     // The hint for the tool, shorter when the window is narrow.
     let font = egui::FontId::proportional(13.0);
@@ -932,7 +932,7 @@ fn keys(ui: &mut Ui, settings: &mut Settings, live: &Live, state: &mut MappingSt
     }
 }
 
-fn panel_ui(ui: &mut Ui, settings: &mut Settings, live: &Live, state: &mut MappingState) {
+fn panel_ui(ui: &mut Ui, settings: &mut Settings, live: &Live, state: &mut MappingState, actions: &mut Vec<UiAction>) {
     // Tabs, icon and name.
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
@@ -1004,7 +1004,7 @@ fn panel_ui(ui: &mut Ui, settings: &mut Settings, live: &Live, state: &mut Mappi
                 PanelTab::Surfaces => surfaces_tab(ui, settings, state),
                 PanelTab::Transform => transform_tab(ui, settings, live, state),
                 PanelTab::Look => look_tab(ui, settings, state),
-                PanelTab::Output => output_tab(ui, settings, live, state),
+                PanelTab::Output => output_tab(ui, settings, live, state, actions),
             });
     });
 }
@@ -1368,8 +1368,21 @@ fn look_tab(ui: &mut Ui, settings: &mut Settings, state: &mut MappingState) {
 }
 
 /// A network screen's link: how it is doing, its delay, the TV's modes.
-fn network_link(ui: &mut Ui, o: &mut crate::settings::OutputConf, link: Option<crate::ui::NetLink>) {
+fn network_link(ui: &mut Ui, o: &mut crate::settings::OutputConf, link: Option<crate::ui::NetLink>, searching: bool, actions: &mut Vec<UiAction>) {
     ui.add_space(6.0);
+    if !link.as_ref().is_some_and(|l| l.connected) {
+        ui.horizontal(|ui| {
+            if searching {
+                ui.add(egui::Spinner::new());
+                ui.label(style::muted("Searching the network…"));
+            } else {
+                if super::icons::small(ui, super::icons::Icon::Refresh, "Search for the box again", style::MUTED).clicked() {
+                    actions.push(UiAction::NetSearch);
+                }
+                ui.label(style::muted("Search again"));
+            }
+        });
+    }
     match &link {
         Some(l) if l.connected => {
             let late = if l.shown > 0 { 100.0 * l.late as f32 / (l.shown + l.late) as f32 } else { 0.0 };
@@ -1426,7 +1439,7 @@ fn shape_of(aspect: Option<f32>) -> Shape {
     }
 }
 
-fn output_tab(ui: &mut Ui, settings: &mut Settings, live: &Live, state: &mut MappingState) {
+fn output_tab(ui: &mut Ui, settings: &mut Settings, live: &Live, state: &mut MappingState, actions: &mut Vec<UiAction>) {
     let k = state.output;
     let others: Vec<String> = settings
         .output
@@ -1459,7 +1472,7 @@ fn output_tab(ui: &mut Ui, settings: &mut Settings, live: &Live, state: &mut Map
     }));
     let network = o.display.as_deref().and_then(crate::settings::network_name).is_some();
     if network {
-        network_link(ui, o, live.net_links.get(k).cloned().flatten());
+        network_link(ui, o, live.net_links.get(k).cloned().flatten(), live.net_searching, actions);
     }
     ui.add_space(8.0);
     ui.label(style::muted("On it now"));

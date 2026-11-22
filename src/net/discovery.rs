@@ -8,8 +8,10 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::net::IpAddr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use mdns_sd::{ServiceDaemon, ServiceEvent};
 
@@ -123,23 +125,62 @@ impl State {
 /// Listens on the network in the background.
 pub struct Discovery {
     state: Arc<Mutex<State>>,
-    _daemon: Option<ServiceDaemon>,
+    /// Which listener is the current one: an old one's last words are ignored.
+    generation: Arc<AtomicU64>,
+    daemon: Mutex<Option<ServiceDaemon>>,
+    searched: Mutex<Instant>,
 }
 
 impl Discovery {
     pub fn start() -> Self {
         let state = Arc::new(Mutex::new(State::default()));
-        let Ok(daemon) = ServiceDaemon::new() else {
-            return Discovery { state, _daemon: None };
-        };
+        let generation = Arc::new(AtomicU64::new(0));
+        let daemon = Mutex::new(listen(&state, &generation));
+        Discovery { state, generation, daemon, searched: Mutex::new(Instant::now()) }
+    }
+
+    /// Looks again from scratch: forgets what was heard and listens anew on
+    /// the network as it is now, so every box answers again. After the Mac's
+    /// Wi-Fi drops and comes back, or a box returns at a new address, the
+    /// old listener can stay deaf; a new one hears them within a second.
+    pub fn search(&self) {
+        self.generation.fetch_add(1, Ordering::SeqCst);
+        *self.state.lock().unwrap() = State::default();
+        let fresh = listen(&self.state, &self.generation);
+        if let Some(old) = std::mem::replace(&mut *self.daemon.lock().unwrap(), fresh) {
+            let _ = old.shutdown();
+        }
+        *self.searched.lock().unwrap() = Instant::now();
+    }
+
+    /// How long since the last search (or the start).
+    pub fn since_search(&self) -> Duration {
+        self.searched.lock().unwrap().elapsed()
+    }
+
+    /// Everything on the network now, by name.
+    pub fn found(&self) -> Vec<Found> {
+        self.state.lock().unwrap().list()
+    }
+}
+
+/// Browses for the screens, filling `state` from a thread per service.
+fn listen(state: &Arc<Mutex<State>>, generation: &Arc<AtomicU64>) -> Option<ServiceDaemon> {
+    {
+        let daemon = ServiceDaemon::new().ok()?;
+        let mine = generation.load(Ordering::SeqCst);
         for service in [SERVICE_TYPE, ANDROID_TV] {
             let Ok(rx) = daemon.browse(service) else { continue };
             let st = state.clone();
+            let current = generation.clone();
             thread::Builder::new()
                 .name(format!("browse {service}"))
                 .spawn(move || {
                     let app = service == SERVICE_TYPE;
                     while let Ok(event) = rx.recv() {
+                        if current.load(Ordering::SeqCst) != mine {
+                            break;
+                        }
                         match event {
                             ServiceEvent::ServiceResolved(info) => {
                                 let prop = |k: &str| info.get_property_val_str(k).map(str::to_string);
@@ -161,12 +202,7 @@ impl Discovery {
                 })
                 .ok();
         }
-        Discovery { state, _daemon: Some(daemon) }
-    }
-
-    /// Everything on the network now, by name.
-    pub fn found(&self) -> Vec<Found> {
-        self.state.lock().unwrap().list()
+        Some(daemon)
     }
 }
 

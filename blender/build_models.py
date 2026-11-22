@@ -906,6 +906,715 @@ def build_cubes():
     return [cube]
 
 
+# -------------------------------------------- from Sagi's picks (2026-11-22)
+#
+# Downloaded models (CC BY, credited in the README). Each part's name tells
+# noctiluca what it is made of and how it moves (src/render/model.rs):
+# "_paint" glossy paint in the palette's colours, "_tail" sways, "_flex"
+# flaps, "_screen" shows the spectrum, and "pN_" makes it part N, which a
+# composition can move on its own.
+
+
+def source(name):
+    return os.path.join(SOURCES, name, "source.glb")
+
+
+def import_meshes(path):
+    """Every mesh in a file, where it really stands, without its materials."""
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"download it first, to {path}")
+    bpy.ops.import_scene.gltf(filepath=path)
+    bpy.context.view_layer.update()
+    meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+    for obj in meshes:
+        world = obj.matrix_world.copy()
+        obj.parent = None
+        obj.matrix_world = world
+    for obj in [o for o in bpy.context.scene.objects if o.type != "MESH"]:
+        bpy.data.objects.remove(obj, do_unlink=True)
+    for obj in meshes:
+        bake(obj)
+        obj.data.materials.clear()
+    return meshes
+
+
+def keep_faces(obj, keep):
+    """Deletes the faces whose centre `keep` turns down."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    gone = [f for f in bm.faces if not keep(f.calc_center_median())]
+    bmesh.ops.delete(bm, geom=gone, context="FACES")
+    bm.to_mesh(obj.data)
+    bm.free()
+    obj.data.update()
+    return obj
+
+
+def build_teddy():
+    """A teddy bear, glossy like a balloon toy (photogrammetry by Hannah
+    Eliason, CC BY)."""
+    bear = imported(source("teddy"), "teddy_paint", 60000)
+    normalise([bear])
+    # A scan is a patchwork: rebuilt from voxels it is one sealed skin, so
+    # reducing it later opens no cracks.
+    remesh(bear, 0.012)
+    smooth(bear, 0.6, 6)
+    decimate(bear, 9000)
+    shade(bear, flat=False)
+    normalise([bear])
+    return [bear]
+
+
+def build_koi():
+    """A koi carp, its markings painted in the palette and its tail free to
+    sway (SDPM Esare, CC BY). Head to -X, tail to +X."""
+    fish = imported(source("koi"), "koi_paint_tail", 8000)
+    shade(fish, flat=False)
+    normalise([fish])
+    return [fish]
+
+
+def build_manta():
+    """A manta ray whose wings flap (Robert_the_whale, CC BY). It lies flat,
+    head to +Y; the wings span X."""
+    ray = imported(source("manta"), "manta_flex", 30000)
+    normalise([ray])
+    remesh(ray, 0.008)
+    smooth(ray, 0.4, 2)
+    decimate(ray, 6000)
+    shade(ray, flat=False)
+    normalise([ray])
+    return [ray]
+
+
+def build_helmet():
+    """A sci-fi helmet whose visor shows the spectrum (Udon-San, CC BY)."""
+    meshes = import_meshes(source("helmet"))
+    visor = [m for m in meshes if m.name.startswith("Plane.002")]
+    shell = [m for m in meshes if m not in visor]
+    body = join(shell, "helmet")
+    decimate(body, 6500)
+    shade(body, flat=False)
+    screen = visor[0]
+    screen.name = "helmet_visor_screen"
+    shade(screen, flat=False)
+    normalise([body, screen])
+    return [body, screen]
+
+
+def build_lips():
+    """Pop-art lips, glossy in the palette's colours, the upper and lower
+    lip parts 1 and 2 so they can part (Alex Petuhov, CC BY; the drip
+    stand they came on is cut away)."""
+    lips = imported(source("lips"), "p1_lips_paint", 20000)
+    zs = [v.co.z for v in lips.data.vertices]
+    lo, hi = min(zs), max(zs)
+    # The stand flares out at its foot and narrows to a neck under the
+    # lips: cut where it grows wide again above that neck.
+    width = {}
+    for v in lips.data.vertices:
+        band = int((v.co.z - lo) / (hi - lo) * 40)
+        width[band] = max(width.get(band, 0.0), abs(v.co.x))
+    widest = max(width.values())
+    neck = min((b for b in width if b < 32), key=lambda b: width[b])
+    bottom = min(b for b, w in width.items() if b > neck and w > 0.6 * widest)
+    cut = lo + (bottom - 0.5) / 40 * (hi - lo)
+    keep_faces(lips, lambda c: c.z > cut)
+    # The lips are cut from many thin slices; fused from voxels they become
+    # one glossy surface.
+    normalise([lips])
+    remesh(lips, 0.02)
+    zs = [v.co.z for v in lips.data.vertices]
+    mouth = (min(zs) + max(zs)) / 2
+    lower = lips.copy()
+    lower.data = lips.data.copy()
+    lower.name = "p2_lips_paint"
+    scene().collection.objects.link(lower)
+    keep_faces(lips, lambda c: c.z >= mouth)
+    keep_faces(lower, lambda c: c.z < mouth)
+    for part in (lips, lower):
+        decimate(part, 7000)
+        smooth(part, 0.3, 2)
+        shade(part, flat=False)
+    normalise([lips, lower])
+    print(f"lips: stand cut at {cut:.3f}, mouth at {mouth:.3f}")
+    return [lips, lower]
+
+
+# ---------------------------------------------- built from code (2026-11-22)
+
+
+def standing(outline, name, thickness, at=(0, 0, 0), scale=1.0):
+    """A flat shape from an outline (x, y points), stood up to face the room
+    (-Y), centred at `at`."""
+    obj = wing([(x * scale, y * scale) for x, y in outline], name, thickness)
+    obj.rotation_euler = (math.radians(90), 0, 0)
+    obj.location = at
+    return bake(obj)
+
+
+def heart_outline(samples=72):
+    """The classic heart curve, about 2 units wide, its middle at the origin."""
+    pts = []
+    for k in range(samples):
+        t = k / samples * math.tau
+        x = 16 * math.sin(t) ** 3
+        y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+        pts.append((x / 16.0, (y + 2.0) / 16.0))
+    return pts
+
+
+def circle_outline(r, cx=0.0, cy=0.0, samples=40):
+    return [(cx + r * math.cos(k / samples * math.tau), cy + r * math.sin(k / samples * math.tau)) for k in range(samples)]
+
+
+def suit(kind, name, size, at, thickness=0.02):
+    """A card suit symbol standing up: spade, heart, diamond or club."""
+    parts = []
+    if kind == "heart":
+        parts.append(standing(heart_outline(), name, thickness, at, size * 0.5))
+    elif kind == "diamond":
+        parts.append(standing([(0, 1), (0.68, 0), (0, -1), (-0.68, 0)], name, thickness, at, size * 0.5))
+    elif kind == "spade":
+        parts.append(standing([(x, -y + 0.1) for x, y in reversed(heart_outline())], name, thickness, at, size * 0.5))
+        parts.append(standing([(-0.08, -0.2), (0.08, -0.2), (0.3, -0.95), (-0.3, -0.95)], name + "_stem", thickness, at, size * 0.5))
+    else:  # club
+        for cx, cy in ((0.0, 0.42), (-0.42, -0.08), (0.42, -0.08)):
+            parts.append(standing(circle_outline(0.36, cx, cy), name + "_leaf", thickness, at, size * 0.5))
+        parts.append(standing([(-0.08, 0.0), (0.08, 0.0), (0.3, -0.95), (-0.3, -0.95)], name + "_stem", thickness, at, size * 0.5))
+    return join(parts, name) if len(parts) > 1 else parts[0]
+
+
+def rounded_rect(w, h, r, samples=8):
+    pts = []
+    for cx, cy, a0 in ((w / 2 - r, h / 2 - r, 0), (-w / 2 + r, h / 2 - r, 90), (-w / 2 + r, -h / 2 + r, 180), (w / 2 - r, -h / 2 + r, 270)):
+        for k in range(samples + 1):
+            a = math.radians(a0 + 90 * k / samples)
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def build_cards():
+    """Five playing cards, each its own part (p1..p5) so a composition can
+    fan them out and flip one: a chrome card with its suit, large in the
+    middle and small in two corners, glowing in the palette's colour."""
+    objs = []
+    for n, kind in enumerate(["spade", "heart", "diamond", "club", "heart"], start=1):
+        card = standing(rounded_rect(1.26, 1.76, 0.1), f"p{n}_card", 0.03)
+        symbols = [suit(kind, f"p{n}_card_big", 0.62, (0, -0.025, 0))]
+        # A fine border inside the edge, as printed cards have.
+        symbols.append(tube([(x, -0.022, z) for x, z in rounded_rect(1.08, 1.58, 0.08)], 0.009, f"p{n}_card_border", cyclic=True, resolution=3))
+        for (x, z), sz in (((-0.45, 0.66), 0.17), ((0.45, -0.66), 0.17)):
+            symbols.append(suit(kind, f"p{n}_card_pip", sz, (x, -0.025, z)))
+        objs += [card, join(symbols, f"p{n}_card_glow")]
+    for obj in objs:
+        shade(obj, flat=False)
+    normalise(objs)
+    return objs
+
+
+def build_dice():
+    """A die with rounded edges and pips that glow in the palette's colour,
+    1 opposite 6, 2 opposite 5, 3 opposite 4."""
+    cube = box((1.0, 1.0, 1.0))
+    modifier(cube, "BEVEL", width=0.14, segments=5)
+    bake(cube)
+    cube.name = "dice"
+    shade(cube, flat=False)
+    o = 0.26
+    layouts = {1: [(0, 0)], 2: [(-o, -o), (o, o)], 3: [(-o, -o), (0, 0), (o, o)], 4: [(-o, -o), (o, -o), (-o, o), (o, o)],
+               5: [(-o, -o), (o, -o), (0, 0), (-o, o), (o, o)], 6: [(-o, -o), (o, -o), (-o, 0), (o, 0), (-o, o), (o, o)]}
+    # Which face each number is on: its outward direction.
+    faces = {1: (0, -1, 0), 6: (0, 1, 0), 2: (1, 0, 0), 5: (-1, 0, 0), 3: (0, 0, 1), 4: (0, 0, -1)}
+    pips = []
+    for number, (dx, dy, dz) in faces.items():
+        for a, b in layouts[number]:
+            if dy:
+                loc = (a, dy * 0.5, b)
+            elif dx:
+                loc = (dx * 0.5, a, b)
+            else:
+                loc = (a, b, dz * 0.5)
+            # Flattened against its face, then moved there (scaling first,
+            # about its own middle, keeps it on the surface).
+            pip = sphere(0.095, segments=16, rings=8)
+            pip.scale = (0.4 if dx else 1.0, 0.4 if dy else 1.0, 0.4 if dz else 1.0)
+            pip.location = tuple(c * 0.965 for c in loc)
+            bake(pip)
+            pips.append(pip)
+    glow = join(pips, "dice_pips_glow")
+    normalise([cube, glow])
+    return [cube, glow]
+
+
+def lathe(profile, name, segments=48):
+    """A turned shape from its profile: (radius, height) points, bottom up."""
+    mesh = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    rings = []
+    for r, z in profile:
+        rings.append([bm.verts.new((r * math.cos(k / segments * math.tau), r * math.sin(k / segments * math.tau), z)) for k in range(segments)])
+    for a, b in zip(rings, rings[1:]):
+        for k in range(segments):
+            bm.faces.new((a[k], a[(k + 1) % segments], b[(k + 1) % segments], b[k]))
+    bm.faces.new(list(reversed(rings[0])))
+    bm.faces.new(rings[-1])
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new(name, mesh)
+    scene().collection.objects.link(obj)
+    return obj
+
+
+def build_chess():
+    """A chess king (part 1) and queen (part 2), turned like real pieces,
+    each with a collar that glows in the palette's colour."""
+    foot = [(0.56, 0.0), (0.56, 0.08), (0.5, 0.12), (0.46, 0.2), (0.34, 0.27), (0.25, 0.36), (0.2, 0.55), (0.17, 0.9)]
+    king = lathe(foot + [(0.2, 1.02), (0.27, 1.07), (0.27, 1.1), (0.18, 1.14), (0.2, 1.3), (0.3, 1.48), (0.3, 1.54), (0.12, 1.6), (0.0, 1.62)], "p1_king")
+    cross = [box((0.09, 0.09, 0.36), loc=(0, 0, 1.78)), box((0.26, 0.09, 0.09), loc=(0, 0, 1.84))]
+    king = join([king] + cross, "p1_king")
+    kcollar = lathe([(0.28, 1.065), (0.285, 1.075), (0.285, 1.095), (0.28, 1.105)], "p1_king_collar_glow")
+    queen = lathe(foot + [(0.2, 1.02), (0.27, 1.07), (0.27, 1.1), (0.18, 1.14), (0.22, 1.32), (0.32, 1.52), (0.3, 1.56), (0.0, 1.58)], "p2_queen")
+    crown = [sphere(0.06, loc=(0.29 * math.cos(k / 8 * math.tau), 0.29 * math.sin(k / 8 * math.tau), 1.58), segments=12, rings=8) for k in range(8)]
+    crown.append(sphere(0.1, loc=(0, 0, 1.68), segments=16, rings=10))
+    queen = join([queen] + crown, "p2_queen")
+    qcollar = lathe([(0.28, 1.065), (0.285, 1.075), (0.285, 1.095), (0.28, 1.105)], "p2_queen_collar_glow")
+    objs = [king, kcollar, queen, qcollar]
+    for obj in objs:
+        shade(obj, flat=False)
+    normalise(objs)
+    return objs
+
+
+def build_hearts():
+    """A puffy heart like a foil balloon, in glossy paint."""
+    # Soft balls fill the heart's outline; where many overlap, in the
+    # middle, it swells most, as a balloon does.
+    outline = heart_outline()
+
+    def inside(x, y):
+        hit = False
+        for (x1, y1), (x2, y2) in zip(outline, outline[1:] + outline[:1]):
+            if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+                hit = not hit
+        return hit
+
+    balls = bpy.data.metaballs.new("hearts")
+    balls.resolution = 0.03
+    blob = bpy.data.objects.new("hearts_paint", balls)
+    scene().collection.objects.link(blob)
+    step = 0.1
+    for i in range(-12, 13):
+        for j in range(-12, 13):
+            x, y = i * step, j * step
+            if inside(x, y):
+                # Bigger the further from the edge: a dome, not a cushion.
+                edge = min(math.hypot(x - ox, y - oy) for ox, oy in outline)
+                e = balls.elements.new()
+                e.co = (x, 0.0, y)
+                e.radius = 0.16 + 0.34 * min(edge / 0.55, 1.0)
+    select_only([blob])
+    bpy.ops.object.convert(target="MESH")
+    heart = bpy.context.view_layer.objects.active
+    heart.name = "hearts_paint"
+    # Deeper front to back, as a filled balloon is.
+    heart.scale = (1.0, 1.5, 1.0)
+    bake(heart)
+    # Rebuilt and smoothed hard, the little bumps between the balls go.
+    remesh(heart, 0.022)
+    smooth(heart, 1.0, 30)
+    decimate(heart, 9000)
+    shade(heart, flat=False)
+    normalise([heart])
+    return [heart]
+
+
+def build_gyro():
+    """A gyroscope: three nested rings (parts 1 to 3) that each turn on
+    their own axis about a small core that glows (part 4)."""
+    objs = []
+    for n, (major, minor) in enumerate(((1.0, 0.045), (0.8, 0.045), (0.6, 0.045)), start=1):
+        bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor, major_segments=72, minor_segments=12, rotation=(math.radians(90), 0, 0))
+        ring = bake(bpy.context.active_object)
+        ring.name = f"p{n}_gyro"
+        shade(ring, flat=False)
+        objs.append(ring)
+        # A fine line of light along the ring's face.
+        bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=0.014, major_segments=72, minor_segments=6, rotation=(math.radians(90), 0, 0), location=(0, -0.04, 0))
+        line = bake(bpy.context.active_object)
+        line.name = f"p{n}_gyro_line_glow"
+        objs.append(line)
+    core = sphere(0.2, segments=32, rings=16)
+    core.name = "p4_gyro_core_glow"
+    objs.append(core)
+    normalise(objs)
+    return objs
+
+
+def ellipsoid(centre, radii, rot=(0, 0, 0), segments=32, rings=16):
+    """A stretched sphere: radii along its own X, Y, Z, then turned
+    (degrees) and moved to `centre`."""
+    obj = sphere(1.0, segments=segments, rings=rings)
+    obj.scale = radii
+    obj.rotation_euler = [math.radians(a) for a in rot]
+    obj.location = centre
+    return bake(obj)
+
+
+def balloon(p0, p1, radius, name="balloon", segments=40, rings=28):
+    """One twisted section of a modelling balloon from p0 to p1: plump in
+    the middle, pinched round at both ends where it is twisted off, a
+    little wider than round so it reads as squeezed, not turned."""
+    p0, p1 = Vector(p0), Vector(p1)
+    length = (p1 - p0).length
+    profile = []
+    for k in range(rings + 1):
+        t = k / rings
+        # Round ends that pinch in, a full body between.
+        r = radius * (math.sin(math.pi * t) ** 0.42)
+        profile.append((max(r, radius * 0.06), t * length))
+    obj = lathe(profile, name, segments)
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = (p1 - p0).to_track_quat("Z", "Y")
+    obj.location = p0
+    return bake(obj)
+
+
+def knot(at, radius):
+    """The little knot where a balloon is twisted round itself."""
+    k = sphere(radius, segments=20, rings=12)
+    k.scale = (1.0, 1.0, 0.75)
+    k.location = at
+    return bake(k)
+
+
+def build_balloon_dog():
+    """A balloon dog twisted from one long balloon, as at a party but at the
+    size of a sculpture: every section plump and pinched at its twists,
+    small knots at the joints, legs splayed, ears up, the tail curling up
+    to the nozzle. In glossy paint the palette's colour. It stands along X,
+    head to +X, Z up."""
+    R = 0.2
+    parts = [
+        balloon((-0.62, 0.0, 0.98), (0.6, 0.0, 0.98), R * 1.15),          # body
+        balloon((0.6, 0.0, 1.02), (0.86, 0.0, 1.62), R),                  # neck
+        balloon((0.86, 0.0, 1.66), (1.24, 0.0, 1.66), R * 1.02),          # head
+        balloon((1.26, 0.0, 1.65), (1.52, 0.0, 1.6), R * 0.82),           # snout
+        balloon((-0.64, 0.0, 1.02), (-0.92, 0.0, 1.5), R * 0.78),         # tail
+    ]
+    for side in (-1, 1):
+        parts.append(balloon((0.84, side * 0.06, 1.72), (0.72, side * 0.2, 2.22), R * 0.8))     # ears
+        parts.append(balloon((0.58, side * 0.08, 0.92), (0.66, side * 0.28, 0.06), R * 0.92))   # front legs
+        parts.append(balloon((-0.6, side * 0.08, 0.92), (-0.7, side * 0.28, 0.06), R * 0.92))   # back legs
+    knots = [((0.6, 0.0, 0.98), 0.08), ((0.86, 0.0, 1.64), 0.075), ((1.25, 0.0, 1.655), 0.06),
+             ((-0.63, 0.0, 1.0), 0.08), ((-0.93, 0.0, 1.52), 0.05)]
+    parts += [knot(at, r) for at, r in knots]
+    nozzle = cylinder(0.035, 0.08, loc=(-0.95, 0.0, 1.57), rot=(0, math.radians(-30), 0), vertices=16)
+    parts.append(nozzle)
+    dog = join(parts, "balloon_dog_paint")
+    decimate(dog, 7000)
+    shade(dog, flat=False)
+    normalise([dog])
+    return [dog]
+
+
+def build_ducks():
+    """A rubber duck in glossy paint, its beak and eyes glowing in the
+    palette's colour. It floats facing +X."""
+    body = join([
+        ellipsoid((0.0, 0.0, 0.32), (0.55, 0.42, 0.32)),
+        ellipsoid((-0.42, 0.0, 0.5), (0.16, 0.2, 0.12), (0, 35, 0)),     # the tail, tipped up
+        ellipsoid((0.3, 0.0, 0.8), (0.27, 0.26, 0.26)),                  # head
+        ellipsoid((0.22, 0.0, 0.58), (0.2, 0.2, 0.14)),                  # the neck, blending head to body
+        ellipsoid((-0.05, -0.36, 0.42), (0.28, 0.1, 0.16), (10, 0, 8)),  # wings, folded
+        ellipsoid((-0.05, 0.36, 0.42), (0.28, 0.1, 0.16), (-10, 0, 8)),
+    ], "duck_paint")
+    # One skin, as a moulded toy is, rather than balls pushed together.
+    remesh(body, 0.02)
+    smooth(body, 0.6, 8)
+    decimate(body, 6000)
+    details = join([
+        ellipsoid((0.58, 0.0, 0.76), (0.16, 0.13, 0.05)),                # beak
+        ellipsoid((0.47, -0.14, 0.9), (0.035, 0.035, 0.045)),            # eyes
+        ellipsoid((0.47, 0.14, 0.9), (0.035, 0.035, 0.045)),
+    ], "duck_glow")
+    for obj in (body, details):
+        shade(obj, flat=False)
+    normalise([body, details])
+    return [body, details]
+
+
+def build_smiley():
+    """A ball with the rave smile painted on its front (object.wgsl draws
+    the face), in glossy paint."""
+    ball = sphere(1.0, segments=64, rings=32)
+    ball.name = "smiley_paint"
+    shade(ball, flat=False)
+    normalise([ball])
+    return [ball]
+
+
+def build_neon():
+    """Three neon signs, each its own part: an arrow (1), a lightning bolt
+    (2) and a star (3), tubes that glow in the palette's colour on a thin
+    chrome rail."""
+    arrow = [(-0.9, 0.12), (0.35, 0.12), (0.35, 0.4), (0.95, 0.0), (0.35, -0.4), (0.35, -0.12), (-0.9, -0.12)]
+    bolt = [(0.15, 0.95), (-0.45, -0.05), (-0.02, -0.05), (-0.25, -0.95), (0.5, 0.15), (0.06, 0.15), (0.38, 0.95)]
+    star = []
+    for k in range(10):
+        r = 0.95 if k % 2 == 0 else 0.4
+        a = math.pi / 2 + k * math.pi / 5
+        star.append((r * math.cos(a), r * math.sin(a)))
+    objs = []
+    for n, outline in ((1, arrow), (2, bolt), (3, star)):
+        pts = [(x, -0.02, z) for x, z in outline]
+        objs.append(tube(pts, 0.04, f"p{n}_neon_glow", cyclic=True, resolution=4))
+        rail = box((1.9, 0.03, 0.03), loc=(0, 0.06, -1.05))
+        rail.name = f"p{n}_neon_rail"
+        objs.append(rail)
+    for obj in objs:
+        shade(obj, flat=False)
+    normalise(objs)
+    return objs
+
+
+def build_mobius():
+    """A Möbius strip in chrome, a line of light along its middle that runs
+    round it on the beat."""
+    mesh = bpy.data.meshes.new("mobius")
+    bm = bmesh.new()
+    nu, nv, w = 192, 6, 0.42
+    grid = []
+    for i in range(nu):
+        u = i / nu * math.tau
+        row = []
+        for j in range(nv + 1):
+            v = -w + 2 * w * j / nv
+            r = 1 + v / 2 * math.cos(u / 2)
+            row.append(bm.verts.new((r * math.cos(u), r * math.sin(u), v / 2 * math.sin(u / 2))))
+        grid.append(row)
+    for i in range(nu):
+        a, b = grid[i], grid[(i + 1) % nu]
+        if i == nu - 1:
+            b = list(reversed(b))  # the half twist joins the edges the other way round
+        for j in range(nv):
+            bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
+    bm.to_mesh(mesh)
+    bm.free()
+    strip = bpy.data.objects.new("mobius", mesh)
+    scene().collection.objects.link(strip)
+    modifier(strip, "SOLIDIFY", thickness=0.035, offset=0.0)
+    bake(strip)
+    shade(strip, flat=False)
+    line = tube([(math.cos(i / 128 * math.tau), math.sin(i / 128 * math.tau), 0.0) for i in range(128)], 0.055, "mobius_run", cyclic=True, resolution=4)
+    shade(line, flat=False)
+    normalise([strip, line])
+    return [strip, line]
+
+
+def swept(points, radii, name, resolution=10):
+    """A tube along `points` whose thickness follows `radii` (one per point)."""
+    curve = bpy.data.curves.new(name, "CURVE")
+    curve.dimensions = "3D"
+    curve.bevel_depth = 1.0
+    curve.bevel_resolution = resolution
+    curve.use_fill_caps = True
+    spline = curve.splines.new("POLY")
+    spline.points.add(len(points) - 1)
+    for point, (x, y, z), r in zip(spline.points, points, radii):
+        point.co = (x, y, z, 1.0)
+        point.radius = r
+    obj = bpy.data.objects.new(name, curve)
+    scene().collection.objects.link(obj)
+    select_only([obj])
+    bpy.ops.object.convert(target="MESH")
+    return bpy.context.view_layer.objects.active
+
+
+def build_nautilus():
+    """A nautilus shell: a tube winding out along a logarithmic spiral,
+    widening as it grows, as the animal builds each chamber bigger than the
+    last; the seams between chambers glow in the palette's colour. It
+    stands facing the room, the spiral in the X-Z plane."""
+    a, b, turns = 0.07, 0.19, 2.6
+    n = 160
+    pts, radii = [], []
+    for k in range(n + 1):
+        t = k / n * turns * math.tau
+        r = a * math.exp(b * t)
+        pts.append((r * math.cos(t), 0.0, r * math.sin(t)))
+        radii.append(r * 0.62)
+    shell = swept(pts, radii, "nautilus", resolution=9)
+    shade(shell, flat=False)
+    # The chamber walls, where the shell shows its rings: one every
+    # twelfth of a turn on the outer whorl.
+    seams = []
+    for k in range(10, n, 7):
+        t = k / n * turns * math.tau
+        r = a * math.exp(b * t)
+        c = Vector((r * math.cos(t), 0.0, r * math.sin(t)))
+        tangent = Vector((-math.sin(t) + b * math.cos(t), 0.0, math.cos(t) + b * math.sin(t))).normalized()
+        side = tangent.cross(Vector((0, 1, 0))).normalized()
+        ring = []
+        for j in range(24):
+            ang = j / 24 * math.tau
+            ring.append(tuple(c + (side * math.cos(ang) + Vector((0, 1, 0)) * math.sin(ang)) * r * 0.635))
+        seams.append(tube(ring, max(0.006, r * 0.025), f"seam{k}", cyclic=True, resolution=2))
+    glow = join(seams, "nautilus_seams_glow")
+    normalise([shell, glow])
+    return [shell, glow]
+
+
+def build_crane():
+    """An origami crane, folded flat facets like real paper, in paint the
+    palette's colour; its wings (along X) flap. Head toward +Y."""
+    faces = [
+        # body: a folded diamond
+        [(0, 0.38, 0.0), (0.12, 0.0, 0.1), (0, -0.38, 0.0)],
+        [(0, 0.38, 0.0), (-0.12, 0.0, 0.1), (0, -0.38, 0.0)],
+        [(0, 0.38, 0.0), (0.1, 0.0, -0.12), (0, -0.38, 0.0)],
+        [(0, 0.38, 0.0), (-0.1, 0.0, -0.12), (0, -0.38, 0.0)],
+        # neck and head, bent down at the tip
+        [(0, 0.25, 0.02), (0.03, 0.34, 0.05), (0, 0.78, 0.55)],
+        [(0, 0.25, 0.02), (-0.03, 0.34, 0.05), (0, 0.78, 0.55)],
+        [(0, 0.78, 0.55), (0.02, 0.76, 0.5), (0, 0.95, 0.42)],
+        [(0, 0.78, 0.55), (-0.02, 0.76, 0.5), (0, 0.95, 0.42)],
+        # tail
+        [(0, -0.25, 0.02), (0.03, -0.34, 0.05), (0, -0.8, 0.5)],
+        [(0, -0.25, 0.02), (-0.03, -0.34, 0.05), (0, -0.8, 0.5)],
+    ]
+    wings = []
+    for side in (-1, 1):
+        # Each wing is two facets with a fold along its middle.
+        wings += [
+            [(side * 0.06, 0.22, 0.08), (side * 0.55, 0.05, 0.28), (side * 1.05, -0.12, 0.42)],
+            [(side * 0.06, 0.22, 0.08), (side * 0.06, -0.2, 0.08), (side * 0.55, 0.05, 0.28)],
+            [(side * 0.06, -0.2, 0.08), (side * 1.05, -0.12, 0.42), (side * 0.55, 0.05, 0.28)],
+        ]
+
+    def facets(tris, name):
+        mesh = bpy.data.meshes.new(name)
+        bm = bmesh.new()
+        for tri in tris:
+            bm.faces.new([bm.verts.new(v) for v in tri])
+        bm.to_mesh(mesh)
+        bm.free()
+        obj = bpy.data.objects.new(name, mesh)
+        scene().collection.objects.link(obj)
+        modifier(obj, "SOLIDIFY", thickness=0.012, offset=0.0)
+        return bake(obj)
+
+    body = facets(faces, "crane_paint")
+    wing = facets(wings, "crane_wings_paint_flex")
+    for obj in (body, wing):
+        shade(obj, flat=True)
+    normalise([body, wing])
+    return [body, wing]
+
+
+HAMSA_DESIGN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hamsa_design.json")
+
+
+def filled(loops, name, extrude, bevel=0.0, resolution=0, y=0.0, fill="BOTH"):
+    """A flat solid from closed outlines (x, y points), loops inside loops
+    making holes, stood up to face the room (-Y) and centred at depth `y`.
+    `fill` "FRONT" caps only the face towards the room (for a relief whose
+    back is buried in a body)."""
+    curve = bpy.data.curves.new(name, "CURVE")
+    curve.dimensions = "2D"
+    curve.fill_mode = fill
+    curve.extrude = extrude
+    curve.bevel_depth = bevel
+    curve.bevel_resolution = resolution
+    for loop in loops:
+        spline = curve.splines.new("POLY")
+        spline.points.add(len(loop) - 1)
+        for point, (x, z) in zip(spline.points, loop):
+            point.co = (x, z, 0.0, 1.0)
+        spline.use_cyclic_u = True
+    obj = bpy.data.objects.new(name, curve)
+    scene().collection.objects.link(obj)
+    select_only([obj])
+    bpy.ops.object.convert(target="MESH")
+    obj = bpy.context.view_layer.objects.active
+    obj.rotation_euler = (math.radians(90), 0, 0)
+    obj.location = (0, y, 0)
+    return bake(obj)
+
+
+def build_hamsa():
+    """Noctiluca's own hamsa (drawn by blender/design_hamsa.py into
+    blender/hamsa_design.json): the hand's outline, and on it the drawing's
+    lines (the frame and the ornament) raised in chrome on the
+    front (the hand only turns a little, so the back is plain), over a body painted in the palette's colour (object.wgsl, the
+    `_paint` code), which shows in the cells between the lines. The iris
+    ring of the eye glows. It faces the room."""
+    import json
+
+    with open(HAMSA_DESIGN) as f:
+        trace = json.load(f)
+    body = filled([trace["outline"]], "hamsa_paint", 0.045, bevel=0.015, resolution=2)
+    shade(body, flat=False)
+    face = 0.06
+    rim = filled(trace["lines"], "hamsa_rim", 0.012, y=-face, fill="FRONT")
+    glow = filled(trace["eye"], "hamsa_eye_glow", 0.02, y=-face, fill="FRONT")
+    normalise([body, rim, glow])
+    print(f"hamsa: body {len(body.data.polygons)}, lines {len(rim.data.polygons)}, eye {len(glow.data.polygons)} faces")
+    return [body, rim, glow]
+
+
+def feather(length, width, name):
+    """One feather: a long leaf with a rounded shoulder and a pointed tip,
+    lying along +Y in the X-Y plane."""
+    pts = [(0.0, 0.0), (width * 0.5, length * 0.12), (width * 0.48, length * 0.62), (width * 0.22, length * 0.92),
+           (0.0, length), (-width * 0.22, length * 0.92), (-width * 0.48, length * 0.62), (-width * 0.5, length * 0.12)]
+    return wing(wing_outline(pts, samples=6), name, 0.014)
+
+
+def build_wings():
+    """A pair of angel wings, each its own part (1 left, 2 right) so they
+    can open: rows of smooth feathers, long flight feathers fanning from
+    the tip to the body, shorter ones over them, and a line of light along
+    the bone. Built from code (the downloaded wings were only shapes for
+    a texture)."""
+    objs = []
+    for part, side in ((1, -1), (2, 1)):
+        feathers = []
+        root = Vector((side * 0.08, 0.0, 0.55))
+
+        def bone(t):
+            return root + Vector((side * 0.95 * t, 0.0, 0.42 * t - 0.2 * t * t))
+
+        rows = [
+            # (how many, where along the bone, from..to angle, length, width, depth)
+            (7, (0.55, 1.0), (15, -72), (1.25, 0.95), 0.2, 0.03),
+            (7, (0.08, 0.55), (-78, -96), (0.9, 0.8), 0.19, 0.01),
+            (8, (0.1, 0.95), (-55, -92), (0.5, 0.36), 0.15, -0.015),
+            (8, (0.12, 0.9), (-60, -92), (0.26, 0.2), 0.12, -0.035),
+        ]
+        for count, (t0, t1), (a0, a1), (l0, l1), w, depth in rows:
+            for k in range(count):
+                f = k / (count - 1)
+                t = t1 + (t0 - t1) * f
+                ang = math.radians(a0 + (a1 - a0) * f)
+                length = l0 + (l1 - l0) * f
+                fe = feather(length, w, "f")
+                # Stand it up, length along +Z, then point it along the angle.
+                fe.rotation_euler = (math.radians(90), 0, 0)
+                bake(fe)
+                d = Vector((side * math.cos(ang), 0.0, math.sin(ang)))
+                fe.rotation_euler = (0, math.atan2(d.x, d.z), 0)
+                fe.location = bone(t) + Vector((0, depth - 0.02 * f, 0))
+                bake(fe)
+                feathers.append(fe)
+        body = join(feathers, f"p{part}_wings")
+        shade(body, flat=False)
+        line = tube([tuple(bone(i / 20) + Vector((0, -0.05, 0))) for i in range(21)], 0.014, f"p{part}_wings_bone_glow", cyclic=False, resolution=3)
+        objs += [body, line]
+    normalise(objs)
+    return objs
+
+
 MODELS.update({
     "bust": build_bust,
     "diamond": build_diamond,
@@ -919,6 +1628,25 @@ MODELS.update({
     "butterfly": build_butterfly,
     "cubes": build_cubes,
     "astronaut": build_astronaut,
+    "teddy": build_teddy,
+    "koi": build_koi,
+    "manta": build_manta,
+    "wings": build_wings,
+    "helmet": build_helmet,
+    "lips": build_lips,
+    "cards": build_cards,
+    "dice": build_dice,
+    "chess": build_chess,
+    "hearts": build_hearts,
+    "gyro": build_gyro,
+    "balloon_dog": build_balloon_dog,
+    "ducks": build_ducks,
+    "smiley": build_smiley,
+    "neon": build_neon,
+    "mobius": build_mobius,
+    "nautilus": build_nautilus,
+    "cranes": build_crane,
+    "hamsa": build_hamsa,
 })
 
 # ------------------------------------------------------------ export, render

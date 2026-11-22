@@ -30,6 +30,9 @@ pub struct Uniforms {
     pub events: [f32; 4],
     /// [brightness, intensity, texture, how sure]: the vibe (analysis/vibe.rs).
     pub vibe: [f32; 4],
+    /// [drops so far (wraps at 64), seconds since the last drop, unused,
+    /// unused]: lets an object keep a change a drop made (the dice's face).
+    pub stage: [f32; 4],
 }
 
 /// Most characters a label can hold.
@@ -74,6 +77,9 @@ pub struct Flow {
     bass: f32,
     mid: f32,
     level: f32,
+    /// Drops heard so far, and the seconds since the last one.
+    drops: u32,
+    since_drop: f32,
 }
 
 impl Flow {
@@ -84,6 +90,7 @@ impl Flow {
             bass: value,
             mid: value,
             level: value,
+            ..Self::default()
         }
     }
 }
@@ -95,6 +102,12 @@ impl Flow {
         self.bass += dt * (0.15 + 0.9 * f.bands[1].max(f.bands[0]));
         self.mid += dt * (0.3 + 1.2 * f.bands[2]);
         self.level += dt * (0.2 + f.level);
+        if f.drop {
+            self.drops = self.drops.wrapping_add(1);
+            self.since_drop = 0.0;
+        } else {
+            self.since_drop = (self.since_drop + dt).min(600.0);
+        }
 
         // A GPU works in 32-bit floats: the bigger a number, the coarser its
         // steps. Left alone these clocks pass 20,000 in a night and the
@@ -232,6 +245,7 @@ impl Uniforms {
                 f.vibe.texture,
                 f.vibe.sure,
             ],
+            stage: [(flow.drops % 64) as f32, flow.since_drop, 0.0, 0.0],
         }
     }
 }

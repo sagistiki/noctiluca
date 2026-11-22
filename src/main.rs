@@ -205,6 +205,12 @@ struct Args {
     #[arg(long, hide = true)]
     snapshot_transition: Option<String>,
 
+    /// Snapshots only: the moment in the music to show, as if it were
+    /// happening: groove (between kicks), kick, build (near its top) or drop
+    /// (just after it), for comparing how a look answers each.
+    #[arg(long, hide = true)]
+    snapshot_moment: Option<String>,
+
     /// Snapshots only: how far the change has come, 0..1.
     #[arg(long, hide = true, default_value_t = 0.5)]
     snapshot_mix: f32,
@@ -240,6 +246,11 @@ const REFRESH_LISTS: Duration = Duration::from_secs(4);
 const MESSAGE_SECS: f32 = 6.0;
 /// Displays are looked at this often, to notice a projector plugged in or out.
 const CHECK_DISPLAYS: Duration = Duration::from_secs(1);
+/// At most this often, an unreachable network screen sends the app looking
+/// for the boxes again.
+const NET_SEARCH_EVERY: Duration = Duration::from_secs(15);
+/// At most this often, a stalled lights interface is started afresh.
+const DMX_RESTART_EVERY: Duration = Duration::from_secs(5);
 
 /// The mapping page's picture of what the projector shows.
 #[derive(Default)]
@@ -466,6 +477,9 @@ struct App {
     dmx_ports: Vec<String>,
     /// (frames sent, when) a second ago, for the rate shown.
     dmx_count: (u64, Instant, f32),
+    /// When the lights' sender was last started afresh (by hand or after it
+    /// stalled).
+    dmx_restarted: Instant,
 }
 
 /// What installing on one box is doing, or found out.
@@ -697,6 +711,7 @@ impl App {
             lights_at: now,
             dmx_ports: Vec::new(),
             dmx_count: (0, now, 0.0),
+            dmx_restarted: now,
         }
     }
 
@@ -1058,6 +1073,12 @@ impl App {
             UiAction::NetOpen(ip) => self.box_job(ip, "Opening…", noctiluca::net::adb::open),
             UiAction::NetUse(name) => self.use_network_screen(&name),
             UiAction::LightIdentify(i) => self.light_engine.identify(i),
+            UiAction::NetSearch => {
+                if let Some(d) = &self.discovery {
+                    d.search();
+                }
+            }
+            UiAction::LightsReconnect => self.restart_dmx(),
             UiAction::NextLook => self.director.next(),
             UiAction::HoldLook => {
                 let held = self.director.toggle_lock();
@@ -1075,6 +1096,16 @@ impl App {
     /// Makes the network screen `name` an output's display: the current
     /// mapping tab's output if it has none, else the first without one, else
     /// a new output. Nothing changes if it is one already.
+    /// Starts the lights' sender afresh on the chosen port. The old one stops
+    /// as soon as its stuck write returns (the interface is ours alone, so
+    /// the new one opens it once the old has let go).
+    fn restart_dmx(&mut self) {
+        if self.dmx.is_some() {
+            self.dmx = Some(noctiluca::dmx::DmxOut::start(self.settings.lighting.port.clone()));
+            self.dmx_restarted = Instant::now();
+        }
+    }
+
     fn use_network_screen(&mut self, name: &str) {
         if self.settings.output.outputs.iter().any(|o| o.display.as_deref() == Some(settings::network_display(name).as_str())) {
             return;
@@ -1259,8 +1290,17 @@ impl App {
         }
         self.monitors_at = Some(Instant::now());
         if let Some(d) = &self.discovery {
+            // A screen that has been unreachable for a while: look for the
+            // boxes again (not more than every so often).
+            if self.net.wants_search() && d.since_search() >= NET_SEARCH_EVERY {
+                d.search();
+            }
             let found = d.found();
             self.net.reconcile(&self.settings, &found);
+        }
+        // The lights' interface stopped answering: start its sender afresh.
+        if self.dmx.as_ref().is_some_and(|d| d.status().stalled()) && self.dmx_restarted.elapsed() >= DMX_RESTART_EVERY {
+            self.restart_dmx();
         }
         self.monitors = event_loop
             .available_monitors()
@@ -1797,6 +1837,7 @@ impl App {
             venue_path: self.settings.venue_file.clone().filter(|p| self.venue_cache.contains_key(p)),
             venue_changed: self.settings.venue_file.as_ref().and_then(|p| self.venue_cache.get(p)).is_some_and(|v| *v != self.settings.venue_preset()),
             venue_library: noctiluca::files::pretty_folder(&settings::venue_library()),
+            net_searching: self.discovery.as_ref().is_some_and(|d| d.since_search() < Duration::from_secs(2)),
             net_screens: {
                 let boxes = self.boxes.lock().map(|b| b.clone()).unwrap_or_default();
                 self.discovery
@@ -1824,11 +1865,13 @@ impl App {
             },
             dmx: self.dmx.as_ref().map(|d| {
                 let st = d.status();
+                let stalled = st.stalled();
                 ui::lights_page::DmxLive {
                     port: st.port,
                     kind: st.kind.map(|k| k.name()),
                     sending: st.sending,
                     rate: self.dmx_count.2,
+                    stalled,
                     error: st.error,
                 }
             }),
@@ -2484,6 +2527,30 @@ impl ApplicationHandler for App {
             uniforms.state[1] = mix;
             uniforms.overlay[3] = transition.code();
         }
+        match self.args.snapshot_moment.as_deref() {
+            Some("groove") => {
+                uniforms.state[0] = 1.0;
+                uniforms.state[2] = 0.0;
+                uniforms.beat[1] = 0.1;
+            }
+            Some("kick") => {
+                uniforms.state[0] = 1.0;
+                uniforms.state[2] = 0.0;
+                uniforms.beat[1] = 1.0;
+            }
+            Some("build") => {
+                uniforms.state[0] = 2.0;
+                uniforms.state[2] = 0.85;
+                uniforms.beat[1] = 0.6;
+            }
+            Some("drop") => {
+                uniforms.state[0] = 3.0;
+                uniforms.state[2] = 0.0;
+                uniforms.beat[1] = 1.0;
+                uniforms.stage = [1.0, 0.4, 0.0, 0.0];
+            }
+            _ => {}
+        }
         let look = show.to;
         let Some(renderer) = &mut self.renderer else {
             return;
@@ -2552,6 +2619,12 @@ impl ApplicationHandler for App {
             event_loop.exit();
             return;
         }
+        // The hidden window may have pulled the main view to its own size
+        // (twice over on a Retina screen); the picture is the size asked for.
+        let (w, h) = (self.args.width, self.args.height);
+        renderer.set_render_size(w, h);
+        uniforms.res_time[0] = w as f32;
+        uniforms.res_time[1] = h as f32;
         match renderer.snapshot(&uniforms, &show, &path) {
             Ok(()) => println!("saved {}", path.display()),
             Err(e) => eprintln!("snapshot failed: {e:#}"),

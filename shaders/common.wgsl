@@ -16,6 +16,7 @@ struct U {
     text: array<vec4f, 8>,    // the label: one font code per character (see present.wgsl)
     events: vec4f,            // lightning light (limited), bolt shape, crystal burst, camera shake
     vibe: vec4f,              // brightness, intensity, texture (-1..1), how sure (0..1)
+    stage: vec4f,             // drops so far (wraps at 64), seconds since the last drop, unused, unused
 }
 
 @group(0) @binding(0) var<uniform> u: U;

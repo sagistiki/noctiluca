@@ -21,7 +21,17 @@ pub fn draw(ui: &mut Ui, live: &Live, actions: &mut Vec<UiAction>) {
 fn network_screens(ui: &mut Ui, live: &Live, actions: &mut Vec<UiAction>, width: f32) {
     style::card_frame().show(ui, |ui| {
         ui.set_width(width - 36.0);
-        style::label(ui, "On this network");
+        ui.horizontal(|ui| {
+            style::label(ui, "On this network");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if live.net_searching {
+                    ui.add(egui::Spinner::new());
+                    ui.label(style::muted("Searching…"));
+                } else if super::icons::small(ui, super::icons::Icon::Refresh, "Search the network again", style::MUTED).clicked() {
+                    actions.push(UiAction::NetSearch);
+                }
+            });
+        });
         ui.add_space(4.0);
         let screens: Vec<&NetScreen> = live.net_screens.iter().filter(|s| s.android_tv || s.app_open).collect();
         if screens.is_empty() {

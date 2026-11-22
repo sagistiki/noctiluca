@@ -8,7 +8,7 @@ pub const BACKGROUNDS: [&str; 20] = [
     "concrete", "mercury", "contours", "plasma", "voronoi", "fractal", "ink", "lasers", "sky",
     "silk",
 ];
-pub const PATTERNS: [&str; 22] = [
+pub const PATTERNS: [&str; 27] = [
     "rings",
     "scope",
     "kaleido",
@@ -31,6 +31,12 @@ pub const PATTERNS: [&str; 22] = [
     "stringart",
     "pixelsort",
     "orbits",
+    // From Sagi's picks (2026-11-22).
+    "hearts",
+    "sunburst",
+    "swirl",
+    "chevrons",
+    "eyes",
 ];
 pub const PALETTE_NAMES: [&str; 22] = [
     "neon",
@@ -57,7 +63,7 @@ pub const PALETTE_NAMES: [&str; 22] = [
     "aurora",
 ];
 /// The 3D objects, by the name of their file in assets/models. "none" is no object.
-pub const OBJECTS: [&str; 25] = [
+pub const OBJECTS: [&str; 44] = [
     "none",
     "mirrorball",
     "skull",
@@ -83,6 +89,26 @@ pub const OBJECTS: [&str; 25] = [
     "butterfly",
     "cubes",
     "astronaut",
+    // From Sagi's picks (2026-11-22).
+    "teddy",
+    "koi",
+    "manta",
+    "wings",
+    "helmet",
+    "lips",
+    "cards",
+    "dice",
+    "chess",
+    "hearts",
+    "gyro",
+    "balloon_dog",
+    "ducks",
+    "smiley",
+    "neon",
+    "mobius",
+    "nautilus",
+    "cranes",
+    "hamsa",
 ];
 pub const MATERIALS: [&str; 2] = ["chrome", "glass"];
 /// The atmosphere over everything: weather, fire, light. "storm" is clouds
@@ -190,13 +216,15 @@ pub const PALETTES: [[[f32; 4]; 4]; 22] = [
         [0.50, 0.50, 0.50, 0.0],
     ],
     // noctiluca: the brand sea, night, deep, glowing blue, the pale of the
-    // shallows, sand-cream (fitted to it; it overshoots so red stays dark
-    // until the shallows). The sea background's bands run along it.
+    // shallows, foam-white, and back (fitted to it, the same both ways round
+    // so patterns that sample anywhere stay in the brand; it overshoots so
+    // red stays dark until the shallows). The sea background's bands run
+    // along it, and warm the lightest band to sand.
     [
-        [0.575, 0.50, 0.375, 0.0],
-        [0.70, 0.475, 0.65, 0.0],
+        [0.10, 0.48, 0.96, 0.0],
+        [0.875, 0.475, 0.825, 0.0],
         [1.0, 1.0, 1.0, 0.0],
-        [0.40, 0.49, 0.64, 0.0],
+        [0.50, 0.50, 0.50, 0.0],
     ],
     // vaporwave: violet, hot pink, cyan
     [
@@ -624,7 +652,7 @@ pub struct Theme {
 //                9 speakers  10 crystal  11 planet  12 corridor  13 bust  14 diamond  15 vinyl
 //                16 jellyfish  17 rose  18 blob  19 pyramid  20 moon  21 dna  22 butterfly
 //                23 cubes  24 astronaut
-pub const THEMES: [Theme; 22] = [
+pub const THEMES: [Theme; 28] = [
     Theme {
         name: "red room",
         palettes: &[5],
@@ -640,23 +668,23 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[4, 3],
         patterns: &[5, 0, 4, 7, 2],
         posts: &[0, 1, 3, 7, 10],
-        objects: &[1, 4, 3, 5, 10, 12],
+        objects: &[1, 4, 3, 5, 10, 12, 35, 40, 42],
         atmos: &[0, 4, 2, 5, 10, 6],
     },
     Theme {
         name: "terminal",
         palettes: &[7],
         backgrounds: &[4, 1, 2],
-        patterns: &[1, 4, 5, 6, 18, 13, 20],
+        patterns: &[1, 4, 5, 6, 18, 13, 20, 26],
         posts: &[5, 8],
-        objects: &[6, 2, 1, 9, 12],
+        objects: &[6, 2, 1, 9, 12, 29],
         atmos: &[0, 2, 1, 7],
     },
     Theme {
         name: "ultraviolet",
         palettes: &[8, 4],
         backgrounds: &[3, 2, 4],
-        patterns: &[2, 0, 5, 8, 7, 10, 12],
+        patterns: &[2, 0, 5, 8, 7, 10, 12, 24],
         posts: &[6, 3, 1, 9],
         objects: &[4, 5, 6, 3, 10, 11],
         atmos: &[0, 5, 4, 2, 11, 8],
@@ -690,7 +718,7 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[4, 5, 11, 8],
         patterns: &[14, 19, 5, 0, 17],
         posts: &[12, 0, 1, 19, 7],
-        objects: &[1, 4, 3, 7, 5, 13, 14, 15],
+        objects: &[1, 4, 3, 7, 5, 13, 14, 15, 31, 32, 36, 41, 43],
         atmos: &[0, 4, 2, 12, 10],
     },
     Theme {
@@ -699,7 +727,7 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[5, 19, 4],
         patterns: &[14, 17, 0, 9, 21],
         posts: &[12, 0, 18, 7],
-        objects: &[4, 3, 10, 1, 13, 17],
+        objects: &[4, 3, 10, 1, 13, 17, 33],
         atmos: &[0, 2, 5, 10, 6],
     },
     Theme {
@@ -708,16 +736,16 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[6, 16, 2, 4],
         patterns: &[16, 7, 9, 21, 0],
         posts: &[12, 0, 19, 7],
-        objects: &[16, 20, 10, 22, 5, 21],
+        objects: &[16, 20, 10, 22, 5, 21, 26, 27, 41, 37],
         atmos: &[0, 8, 10, 13, 9, 11],
     },
     Theme {
         name: "velvet",
         palettes: &[5, 16, 11],
         backgrounds: &[19, 16, 4, 5],
-        patterns: &[4, 5, 7, 11],
+        patterns: &[4, 5, 7, 11, 22],
         posts: &[12, 7, 10, 0],
-        objects: &[1, 2, 7, 8, 17, 15],
+        objects: &[1, 2, 7, 8, 17, 15, 30, 31, 34],
         atmos: &[0, 2, 3, 4, 7, 10],
     },
     Theme {
@@ -726,14 +754,14 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[11, 19, 8, 3],
         patterns: &[11, 9, 14, 19],
         posts: &[12, 18, 6, 0],
-        objects: &[1, 4, 3, 5, 10, 18, 14],
+        objects: &[1, 4, 3, 5, 10, 18, 14, 25, 35, 40, 36],
         atmos: &[0, 4, 5, 12, 11, 8],
     },
     Theme {
         name: "bauhaus",
         palettes: &[19],
         backgrounds: &[4, 10, 3, 12],
-        patterns: &[5, 13, 4, 0, 12, 15],
+        patterns: &[5, 13, 4, 0, 12, 15, 25],
         posts: &[0, 15, 5],
         objects: &[7, 3, 5, 19, 23],
         atmos: &[0, 4],
@@ -742,16 +770,16 @@ pub const THEMES: [Theme; 22] = [
         name: "acid warehouse",
         palettes: &[1, 7],
         backgrounds: &[10, 17, 9, 1, 0],
-        patterns: &[3, 4, 13, 20, 18],
+        patterns: &[3, 4, 13, 20, 18, 25],
         posts: &[11, 13, 16, 5, 8, 1],
-        objects: &[9, 7, 8, 2, 12, 15, 23],
+        objects: &[9, 7, 8, 2, 12, 15, 23, 29, 38, 39],
         atmos: &[0, 1, 4, 2],
     },
     Theme {
         name: "infrared",
         palettes: &[20, 9],
         backgrounds: &[13, 15, 2, 16],
-        patterns: &[10, 15, 20, 2],
+        patterns: &[10, 15, 20, 2, 26],
         posts: &[9, 11, 14, 13, 16],
         objects: &[2, 6, 5, 11, 18, 21],
         atmos: &[0, 3, 1],
@@ -762,7 +790,7 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[7, 15, 4, 0],
         patterns: &[21, 0, 9, 6, 14],
         posts: &[1, 19, 12, 14],
-        objects: &[11, 10, 4, 1, 24, 20, 21],
+        objects: &[11, 10, 4, 1, 24, 20, 21, 35, 40],
         atmos: &[0, 5, 13],
     },
     Theme {
@@ -771,7 +799,7 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[14, 12, 4, 18],
         patterns: &[14, 0, 19, 21, 8],
         posts: &[0, 12, 18, 17],
-        objects: &[10, 4, 3, 7, 14, 19],
+        objects: &[10, 4, 3, 7, 14, 19, 42, 43],
         atmos: &[0, 5, 2, 6, 13, 11],
     },
     Theme {
@@ -789,7 +817,7 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[13, 11, 19, 14, 9],
         patterns: &[17, 10, 11, 14, 2],
         posts: &[18, 6, 3, 12, 14],
-        objects: &[4, 3, 10, 1, 5, 18, 22, 23],
+        objects: &[4, 3, 10, 1, 5, 18, 22, 23, 35, 40, 37],
         atmos: &[0, 5, 4, 8, 12],
     },
     Theme {
@@ -798,7 +826,7 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[14, 8, 7, 4],
         patterns: &[17, 14, 5, 19, 7],
         posts: &[12, 6, 10, 0],
-        objects: &[7, 1, 3, 4, 12, 13, 19, 17],
+        objects: &[7, 1, 3, 4, 12, 13, 19, 17, 43],
         atmos: &[0, 4, 2, 10],
     },
     // Three from the blind look test (2026-11-22), built around the looks
@@ -820,17 +848,72 @@ pub const THEMES: [Theme; 22] = [
         backgrounds: &[6, 8, 3, 4, 10],
         patterns: &[1, 2, 5, 7, 13],
         posts: &[15, 10],
-        objects: &[20, 9, 15, 6, 13],
+        objects: &[20, 9, 15, 6, 13, 42],
         atmos: &[0, 13, 7, 1],
     },
     Theme {
         name: "golden hour",
         palettes: &[10, 9, 14],
         backgrounds: &[18, 19, 6, 5],
-        patterns: &[16, 9, 7, 0, 21],
+        patterns: &[16, 9, 7, 0, 21, 23],
         posts: &[12, 7, 0, 19],
         objects: &[10, 22, 14, 17, 5],
         atmos: &[0, 12, 10, 6, 9],
+    },
+    // From Sagi's picks of new objects and patterns (2026-11-22).
+    Theme {
+        name: "casino",
+        palettes: &[5, 10],
+        backgrounds: &[4, 8, 5],
+        patterns: &[25, 23, 5, 7],
+        posts: &[0, 7, 10],
+        objects: &[15, 9, 31, 32, 33],
+        atmos: &[0, 4, 10, 12],
+    },
+    Theme {
+        name: "toy box",
+        palettes: &[17, 13, 6],
+        backgrounds: &[3, 18, 19],
+        patterns: &[23, 2, 0],
+        posts: &[0, 12, 7, 18],
+        objects: &[25, 18, 22, 34, 36, 37],
+        atmos: &[0, 8, 6],
+    },
+    Theme {
+        name: "love",
+        palettes: &[5, 11, 16],
+        backgrounds: &[19, 4, 16],
+        patterns: &[22, 24, 0, 16],
+        posts: &[0, 7, 10, 19],
+        objects: &[30, 28, 17, 34],
+        atmos: &[0, 10, 9, 6],
+    },
+    Theme {
+        name: "90s rave",
+        palettes: &[1, 0, 18, 7],
+        backgrounds: &[1, 17, 9, 0],
+        patterns: &[25, 26, 24, 13],
+        posts: &[5, 8, 1, 15],
+        objects: &[29, 9, 38, 39],
+        atmos: &[0, 4, 1],
+    },
+    Theme {
+        name: "deep sea",
+        palettes: &[12, 21, 3],
+        backgrounds: &[6, 16, 2],
+        patterns: &[24, 21, 9, 16],
+        posts: &[12, 19, 0, 7],
+        objects: &[26, 27, 16, 20, 41],
+        atmos: &[0, 11, 8, 10],
+    },
+    Theme {
+        name: "heaven",
+        palettes: &[6, 10, 17],
+        backgrounds: &[18, 19, 5],
+        patterns: &[23, 0, 16, 5],
+        posts: &[12, 7, 19, 0],
+        objects: &[28, 13, 10, 42, 43],
+        atmos: &[0, 10, 6, 12],
     },
 ];
 
@@ -841,7 +924,7 @@ pub const THEMES: [Theme; 22] = [
 type Spot = (f32, f32);
 
 /// red room, white corridor, terminal, ultraviolet, amber, rainbow
-pub const THEME_VIBE: [Spot; 22] = [
+pub const THEME_VIBE: [Spot; 28] = [
     (-0.8, 0.8),
     (0.6, -0.4),
     (-0.6, 0.2),
@@ -864,6 +947,12 @@ pub const THEME_VIBE: [Spot; 22] = [
     (-0.3, 0.5),
     (0.2, 0.3),
     (0.5, -0.4),
+    (-0.2, 0.4),
+    (0.7, 0.2),
+    (0.1, 0.1),
+    (0.3, 0.9),
+    (-0.3, -0.5),
+    (0.7, -0.6),
 ];
 /// neon, acid, fire, ice, ultraviolet, red, white, terminal, violet, amber,
 /// gold, rose gold, noctiluca, vaporwave, sunset, forest, blood orange,
@@ -918,8 +1007,9 @@ const BG_VIBE: [Spot; 20] = [
 ];
 /// rings, scope, kaleido, bars, stripes, frames, radar, spiral, halftone,
 /// lissajous, moire, ribbon, truchet, barcode, flower, checker, strings,
-/// mandala, ascii, stringart, pixelsort, orbits
-const PATTERN_VIBE: [Spot; 22] = [
+/// mandala, ascii, stringart, pixelsort, orbits, hearts, sunburst, swirl,
+/// chevrons, eyes
+const PATTERN_VIBE: [Spot; 27] = [
     (0.3, -0.4),
     (0.0, 0.0),
     (0.7, 0.3),
@@ -942,6 +1032,11 @@ const PATTERN_VIBE: [Spot; 22] = [
     (0.4, -0.4),
     (-0.2, 0.7),
     (0.0, -0.6),
+    (0.4, 0.3),
+    (0.5, 0.5),
+    (0.1, -0.1),
+    (0.2, 0.7),
+    (-0.3, 0.3),
 ];
 /// clean, trails, zoom, kaleido, drift, crt, prism, floor, vhs, thermal, film,
 /// chroma, glow, datamosh, feedback, riso, slit scan, heat haze, iridescent,
@@ -970,7 +1065,7 @@ const POST_VIBE: [Spot; 20] = [
 ];
 /// none, mirror ball, skull, prism, gem, knot, eye, monolith, chain,
 /// speakers, crystal, planet, corridor. "None" sits with calm music.
-const OBJECT_VIBE: [Spot; 25] = [
+const OBJECT_VIBE: [Spot; 44] = [
     (0.0, -0.9),
     (0.9, 0.4),
     (-0.8, 0.6),
@@ -996,6 +1091,25 @@ const OBJECT_VIBE: [Spot; 25] = [
     (0.6, -0.3),
     (0.2, 0.8),
     (-0.1, -0.4),
+    (0.6, -0.3),
+    (0.2, -0.5),
+    (-0.2, -0.4),
+    (0.6, -0.4),
+    (-0.4, 0.6),
+    (0.3, 0.4),
+    (-0.1, 0.3),
+    (0.1, 0.5),
+    (-0.3, -0.2),
+    (0.5, 0.1),
+    (0.3, -0.2),
+    (0.6, 0.1),
+    (0.6, -0.3),
+    (0.5, 0.7),
+    (0.2, 0.6),
+    (0.2, -0.3),
+    (-0.1, -0.5),
+    (0.6, -0.2),
+    (0.3, -0.3),
 ];
 /// none, storm, smoke, fire, beams, aurora, snow, rain, bubbles, fireflies,
 /// rays, caustics, flares, meteors
@@ -1055,13 +1169,13 @@ const BG_BUSY: [f32; 20] = [
 /// rings, scope, kaleido, bars, stripes, frames, radar, spiral, halftone,
 /// lissajous, moire, ribbon, truchet, barcode, flower, checker, strings,
 /// mandala, ascii, stringart, pixelsort, orbits
-const PATTERN_TASTE: [f32; 22] = [
+const PATTERN_TASTE: [f32; 27] = [
     0.95, 0.94, 1.45, 0.78, 0.98, 1.45, 1.22, 1.45, 0.84, 1.26, 1.00, 0.70, 0.94, 1.19, 0.80, 0.55,
-    1.29, 0.75, 0.98, 0.63, 1.24, 1.03,
+    1.29, 0.75, 0.98, 0.63, 1.24, 1.03, 1.00, 1.00, 1.00, 1.00, 1.00,
 ];
-const PATTERN_BUSY: [f32; 22] = [
+const PATTERN_BUSY: [f32; 27] = [
     0.2, 0.0, 0.4, 0.5, 0.3, 0.0, 0.2, 0.3, 0.6, 0.0, 0.8, 0.6, 0.8, 0.3, 0.7, 1.0, 0.0, 0.8, 0.5,
-    0.9, 0.3, 0.2,
+    0.9, 0.3, 0.2, 0.3, 0.3, 0.4, 0.4, 0.5,
 ];
 /// neon, acid, fire, ice, ultraviolet, red, white, terminal, violet, amber,
 /// gold, rose gold, noctiluca, vaporwave, sunset, forest, blood orange,
@@ -1091,13 +1205,13 @@ const POST_BUSY: [f32; 20] = [
 /// crystal, planet, corridor, bust, diamond, vinyl, jellyfish, rose, blob,
 /// pyramid, moon, dna, butterfly, cubes, astronaut. (How often there is no
 /// object is decided apart, so "none" weighs 1.)
-const OBJECT_TASTE: [f32; 25] = [
+const OBJECT_TASTE: [f32; 44] = [
     1.00, 0.59, 1.14, 1.04, 0.68, 1.45, 1.45, 1.15, 0.75, 1.19, 1.39, 0.55, 1.45, 0.94, 0.84, 1.45,
-    1.02, 1.14, 0.84, 0.77, 0.94, 0.77, 1.45, 0.57, 0.72,
+    1.02, 1.14, 0.84, 0.77, 0.94, 0.77, 1.45, 0.57, 0.72, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00,
 ];
-const OBJECT_BUSY: [f32; 25] = [
+const OBJECT_BUSY: [f32; 44] = [
     0.0, 0.6, 0.2, 0.3, 0.3, 0.1, 0.1, 0.0, 0.6, 0.2, 0.2, 0.7, 0.0, 0.2, 0.3, 0.1, 0.3, 0.3, 0.3,
-    0.4, 0.1, 0.5, 0.3, 0.8, 0.3,
+    0.4, 0.1, 0.5, 0.3, 0.8, 0.3, 0.2, 0.3, 0.1, 0.4, 0.3, 0.1, 0.3, 0.2, 0.1, 0.3, 0.1, 0.2, 0.3, 0.1, 0.3, 0.1, 0.2, 0.4, 0.1,
 ];
 /// none, storm, smoke, fire, beams, aurora, snow, rain, bubbles, fireflies,
 /// rays, caustics, flares, meteors
@@ -1110,9 +1224,9 @@ const ATMOS_BUSY: [f32; 14] = [
 /// In THEMES order. The themes reworked after the test (noctiluca, velvet,
 /// bauhaus) and the three made from it are not yet proven, so they sit
 /// near 1 rather than at their old scores.
-const THEME_TASTE: [f32; 22] = [
+const THEME_TASTE: [f32; 28] = [
     1.45, 1.45, 1.45, 0.91, 0.91, 1.09, 1.09, 1.45, 1.00, 0.90, 1.09, 0.75, 0.91, 1.02, 1.02, 1.02,
-    1.02, 1.02, 1.25, 1.15, 1.15, 1.15,
+    1.02, 1.02, 1.25, 1.15, 1.15, 1.15, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
 ];
 /// How busy a look may be before it is weighed down. Looks rated in the
 /// test scored about 2.3 below it and fell steadily above.
@@ -2641,13 +2755,17 @@ mod tests {
         // patterns, within two hours (16384 beats at 128 BPM), for all but
         // the odd unlucky seed.
         let mut unlucky = Vec::new();
+        // (Three hours since November 2026, when the library grew from 22
+        // patterns in 22 themes to 27 in 28, so each theme's patterns share
+        // its time with more: the window grows with it.)
         for seed in 0..20 {
-            let frames = play(&mut Director::new(seed), 0, 16384);
+            let frames = play(&mut Director::new(seed), 0, 24576);
             let mut seen: Vec<usize> = frames.iter().map(|(_, o)| o.to.pattern).collect();
             seen.sort();
             seen.dedup();
             if seen.len() < PATTERNS.len() {
-                unlucky.push(seed);
+                let missed: Vec<&str> = (0..PATTERNS.len()).filter(|p| !seen.contains(p)).map(|p| PATTERNS[p]).collect();
+                unlucky.push((seed, missed));
             }
         }
         assert!(
@@ -2665,12 +2783,13 @@ mod tests {
 
     #[test]
     fn objects_come_and_go() {
-        // Within three hours every object appears, for all but the odd
-        // unlucky seed (each stays a few minutes, and there are twenty-four),
+        // Within five hours every object appears, for all but the odd
+        // unlucky seed (each stays a few minutes, and there are forty-three: the
+        // window was three hours for twenty-four, and grows with the library),
         // in both materials, and there are stretches with no object at all.
         let mut unlucky = Vec::new();
         for seed in 0..20 {
-            let frames = play(&mut Director::new(seed), 0, 24576);
+            let frames = play(&mut Director::new(seed), 0, 40960);
             let mut objects: Vec<usize> = frames.iter().map(|(_, o)| o.to.object).collect();
             objects.sort();
             objects.dedup();
@@ -2918,11 +3037,14 @@ mod tests {
 
     #[test]
     fn nothing_disappears_even_when_the_vibe_never_changes() {
-        // Four hours of the same dark, calm music: every object and pattern
-        // still comes up, for all but the odd unlucky seed.
+        // Eight hours of the same dark, calm music: every object and pattern
+        // still comes up, for all but the odd unlucky seed. (It was four
+        // hours for twenty-four objects; there are forty-three now, the
+        // bright ones far from this music, and the window grows with the
+        // library.)
         let mut unlucky = Vec::new();
         for seed in 0..10 {
-            let frames = play_vibe(seed, vibe(-0.8, -0.8), 32768);
+            let frames = play_vibe(seed, vibe(-0.8, -0.8), 65536);
             let mut objects: Vec<usize> = frames.iter().map(|o| o.to.object).collect();
             let mut patterns: Vec<usize> = frames.iter().map(|o| o.to.pattern).collect();
             for list in [&mut objects, &mut patterns] {
@@ -2985,12 +3107,19 @@ mod tests {
         let at = |t: f32| -> [f32; 3] {
             std::array::from_fn(|c| (p[0][c] + p[1][c] * (TAU * (p[2][c] * t + p[3][c])).cos()).clamp(0.0, 1.0))
         };
-        for (t, want) in [(0.5, [0.97, 0.94, 0.87]), (0.25, [0.16, 0.46, 0.94]), (0.0, [0.004, 0.016, 0.05])] {
+        for (t, want) in [(0.5, [0.97, 0.95, 0.95]), (0.25, [0.16, 0.46, 0.94]), (0.0, [0.004, 0.016, 0.05])] {
             let got = at(t);
             assert!(
                 got.iter().zip(want).all(|(g, w)| (g - w).abs() < 0.1),
                 "t {t}: {got:?}, want {want:?}"
             );
+        }
+        // And the same both ways round from the light end, so a pattern
+        // that samples past 0.5 never meets a colour outside the brand.
+        for k in 1..10 {
+            let x = k as f32 * 0.05;
+            let (a, b) = (at(0.5 - x), at(0.5 + x));
+            assert!(a.iter().zip(b).all(|(p, q)| (p - q).abs() < 1e-4), "{x}: {a:?} {b:?}");
         }
     }
 
@@ -3170,7 +3299,9 @@ mod tests {
         // 128 BPM: 20 s is about 43 beats, then up to a phrase (16) to wait.
         let (dark, bright) = (vibe(-0.8, 0.6), vibe(0.8, 0.6));
         let mut checked = 0;
-        for seed in 0..8 {
+        // Sixteen seeds: with more themes, more of them begin in one that
+        // suits both vibes and so prove nothing here.
+        for seed in 0..16 {
             let frames = play_switch(seed, dark, bright, 96, 176);
             // A theme that happens to suit the new vibe too may stay.
             let theme_then = frames.iter().find(|(b, _)| *b == 96).unwrap().1.theme;

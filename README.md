@@ -49,13 +49,13 @@
   </tr>
 </table>
 
-Twenty-two themes, from clean to luxurious to heavy, each a world the director builds looks from: Red room · White corridor · Terminal · Ultraviolet · Amber · Rainbow · Gold room · Marble hall · Noctiluca · Velvet · Liquid chrome · Bauhaus · Acid warehouse · Infrared · Deep space · Arctic · Jungle night · Holographic · Cathedral · Heat · Riso print · Golden hour.
+Twenty-eight themes, from clean to luxurious to heavy, each a world the director builds looks from: Red room · White corridor · Terminal · Ultraviolet · Amber · Rainbow · Gold room · Marble hall · Noctiluca · Velvet · Liquid chrome · Bauhaus · Acid warehouse · Infrared · Deep space · Arctic · Jungle night · Holographic · Cathedral · Heat · Riso print · Golden hour · Casino · Toy box · Love · 90s rave · Deep sea · Heaven.
 
 | | |
 |---|---|
 | **Backgrounds** (20) | tunnel · laser grid · liquid · 3D lattice · void · marble · night sea · nebula · mirror room · LED tunnel · concrete · mercury · contours · plasma · glass cells · fractal dive · ink · lasers through haze · dusk sky · silk |
-| **Patterns** (22) | rings · scope · kaleidoscope · spectrum bars · stripes · frames · radar · square spiral · halftone · Lissajous · moiré · ribbon · Truchet · barcode · flower of life · checker warp · strings · mandala · ASCII · string art · pixel sort · orbits |
-| **3D objects** (24) | mirror ball · skull · prism · gem · knot · eye · monolith · chain · speakers · crystal · planet · corridor · classical bust · diamonds · vinyl · jellyfish · rose · liquid metal · pyramid · moon · DNA · butterflies · cube swarm · astronaut, in chrome or glass (the moon in stone), each in its own composition |
+| **Patterns** (27) | rings · scope · kaleidoscope · spectrum bars · stripes · frames · radar · square spiral · halftone · Lissajous · moiré · ribbon · Truchet · barcode · flower of life · checker warp · strings · mandala · ASCII · string art · pixel sort · orbits · heart tunnel · sunburst · hypno swirl · chevrons · blinking eyes |
+| **3D objects** (43) | mirror ball · skull · prism · gem · knot · eye · monolith · chain · speakers · crystal · planet · corridor · classical bust · diamonds · vinyl · jellyfish · rose · liquid metal · pyramid · moon · DNA · butterflies · cube swarm · astronaut · teddy bear · koi · manta ray · angel wings · helmet · pop lips · poker cards · dice · chess king and queen · balloon hearts · gyroscope · balloon dog · rubber ducks · acid smiley · neon signs · Möbius strip · nautilus · origami cranes · hamsa, in chrome or glass (the moon in stone), some parts lacquered or lit in the palette's colours; each in its own composition, which fits itself to the shape of the screen |
 | **Atmospheres** (13) | storm with lightning · smoke · fire · moving-head beams · aurora · snow · rain · bubbles · fireflies · god rays · caustics · lens flares · shooting stars |
 | **Effects** (19) | trails · zoom · kaleido · drift · CRT · prism · floor · VHS · thermal camera · film · chroma · glow · datamosh · feedback · riso · slit scan · heat haze · iridescent · long exposure |
 | **Palettes** (22) | neon · acid · fire · ice · ultraviolet · gold · rose gold · noctiluca · vaporwave · sunset · forest · blood orange · pastel · cyber · bauhaus · infrared · aurora, and five of one colour on black |
@@ -212,9 +212,14 @@ Rust 2024 · [wgpu](https://wgpu.rs) on Metal · [egui](https://github.com/emilk
 
 [MIT](LICENSE). The Inter font is under the SIL Open Font License ([assets/fonts/Inter-LICENSE.txt](assets/fonts/Inter-LICENSE.txt)).
 
-Three 3D models come from free collections; the rest are built in [blender/build_models.py](blender/build_models.py):
+Eight 3D models come from free collections; the rest are built in [blender/build_models.py](blender/build_models.py):
 - Skull: *Scattering Skull* by Vladimir Petkovic, [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ScatteringSkull), CC0.
 - Bust: *Marble Bust 01* by Rico Cilliers, [Poly Haven](https://polyhaven.com/a/marble_bust_01), CC0.
 - Astronaut: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Astronaut) (model by DigitalSpace), courtesy of NASA.
+- Teddy bear: [*Craft Teddy Bear Photogrammetry*](https://sketchfab.com/3d-models/craft-teddy-bear-photogrammetry-cb81496a28ba423eb5e3bd2149143bc8) by Hannah Eliason, [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Reduced and remeshed.
+- Koi: [*Koi Fish*](https://sketchfab.com/3d-models/koi-fish-3e1b80c3653f43349252aab3b4fb1d86) by SDPM Esare, [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Reduced; the tail made to sway.
+- Manta ray: [*Manta ray*](https://sketchfab.com/3d-models/manta-ray-494e827d52dc486db358cae3523b3a2a) by Robert_the_whale, [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Remeshed; the wings made to flap.
+- Helmet: [*Sci-Fi Helmet*](https://sketchfab.com/3d-models/sci-fi-helmet-785f5cfd848940b1a4a0b8ddeefc9ef1) by Udon-San, [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Reduced; the visor made a screen.
+- Pop lips: [*Lips*](https://sketchfab.com/3d-models/lips-d37185a561464d70a005eedd89ea0301) by Alex Petuhov, [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). The drip and stand removed, remeshed, split in two.
 
 <p align="center"><sub>Made for the dance floor.</sub></p>
