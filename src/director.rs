@@ -55,7 +55,10 @@ pub const OBJECTS: [&str; 13] = [
 pub const MATERIALS: [&str; 2] = ["chrome", "glass"];
 /// The atmosphere over everything: weather, fire, light. "storm" is clouds
 /// with lightning. "none" is no atmosphere.
-pub const ATMOSPHERES: [&str; 6] = ["none", "storm", "smoke", "fire", "beams", "aurora"];
+pub const ATMOSPHERES: [&str; 14] = [
+    "none", "storm", "smoke", "fire", "beams", "aurora", "snow", "rain", "bubbles", "fireflies",
+    "rays", "caustics", "flares", "meteors",
+];
 pub const POST_NAMES: [&str; 20] = [
     "clean", "trails", "zoom", "kaleido", "drift", "crt", "prism", "floor", "vhs", "thermal",
     "film", "chroma", "glow", "datamosh", "feedback", "riso", "slit scan", "heat haze",
@@ -462,7 +465,8 @@ pub struct Theme {
 //   effects      0 clean  1 trails  2 zoom  3 kaleido  (4 drift)  5 crt  6 prism  7 floor  8 vhs  9 thermal  10 film
 //                11 chroma  12 glow  13 datamosh  14 feedback  15 riso  16 slit scan  17 heat haze
 //                18 iridescent  19 long exposure
-//   atmos        0 none  1 storm  2 smoke  3 fire  4 beams  5 aurora
+//   atmos        0 none  1 storm  2 smoke  3 fire  4 beams  5 aurora  6 snow  7 rain  8 bubbles
+//                9 fireflies  10 rays  11 caustics  12 flares  13 meteors
 //   objects      1 mirror ball  2 skull  3 prism  4 gem  5 knot  6 eye  7 monolith  8 chain
 //                9 speakers  10 crystal  11 planet  12 corridor
 pub const THEMES: [Theme; 19] = [
@@ -482,7 +486,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[5, 0, 4, 7, 2],
         posts: &[0, 1, 3, 7, 10],
         objects: &[1, 4, 3, 5, 10, 12],
-        atmos: &[0, 4, 2, 5],
+        atmos: &[0, 4, 2, 5, 10],
     },
     Theme {
         name: "terminal",
@@ -500,7 +504,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[2, 0, 5, 8, 7, 10, 12],
         posts: &[6, 3, 1, 9],
         objects: &[4, 5, 6, 3, 10, 11],
-        atmos: &[0, 5, 4, 2],
+        atmos: &[0, 5, 4, 2, 11],
     },
     Theme {
         name: "amber",
@@ -518,7 +522,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
         posts: &[1, 2, 3, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18],
         objects: &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-        atmos: &[0, 1, 2, 3, 4, 5],
+        atmos: &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
     },
     // The luxe, clean and heavy themes (2026-11-22).
     Theme {
@@ -528,7 +532,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[14, 19, 5, 0, 17],
         posts: &[12, 0, 1, 19, 7],
         objects: &[1, 4, 3, 7, 5],
-        atmos: &[0, 4, 2],
+        atmos: &[0, 4, 2, 12, 10],
     },
     Theme {
         name: "marble hall",
@@ -537,7 +541,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[14, 17, 0, 9, 21],
         posts: &[12, 0, 18, 7],
         objects: &[4, 3, 10, 1],
-        atmos: &[0, 2, 5],
+        atmos: &[0, 2, 5, 10],
     },
     Theme {
         name: "noctiluca",
@@ -546,7 +550,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[21, 9, 0, 11, 16],
         posts: &[12, 1, 19, 17],
         objects: &[11, 10, 4, 1],
-        atmos: &[0, 2, 5],
+        atmos: &[0, 2, 11, 8, 9, 10],
     },
     Theme {
         name: "velvet",
@@ -555,7 +559,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[11, 4, 5, 17],
         posts: &[12, 1, 10, 7],
         objects: &[1, 2, 7, 8],
-        atmos: &[0, 2, 3, 4],
+        atmos: &[0, 2, 3, 4, 7, 10],
     },
     Theme {
         name: "liquid chrome",
@@ -564,7 +568,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[11, 9, 14, 19],
         posts: &[12, 18, 6, 0],
         objects: &[1, 4, 3, 5, 10],
-        atmos: &[0, 4, 5],
+        atmos: &[0, 4, 5, 12, 11],
     },
     Theme {
         name: "bauhaus",
@@ -600,7 +604,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[21, 0, 9, 6, 14],
         posts: &[1, 19, 12, 14],
         objects: &[11, 10, 4, 1],
-        atmos: &[0, 5],
+        atmos: &[0, 5, 13],
     },
     Theme {
         name: "arctic",
@@ -609,7 +613,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[14, 0, 19, 21, 8],
         posts: &[0, 12, 18, 17],
         objects: &[10, 4, 3, 7],
-        atmos: &[0, 5, 2],
+        atmos: &[0, 5, 2, 6, 13, 11],
     },
     Theme {
         name: "jungle night",
@@ -618,7 +622,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[21, 16, 11, 10, 12],
         posts: &[12, 17, 1, 19],
         objects: &[6, 5, 11, 10],
-        atmos: &[0, 2, 5],
+        atmos: &[0, 2, 5, 9, 7],
     },
     Theme {
         name: "holographic",
@@ -627,7 +631,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[17, 10, 11, 14, 2],
         posts: &[18, 6, 3, 12, 14],
         objects: &[4, 3, 10, 1, 5],
-        atmos: &[0, 5, 4],
+        atmos: &[0, 5, 4, 8, 12],
     },
     Theme {
         name: "cathedral",
@@ -636,7 +640,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[17, 14, 5, 19, 7],
         posts: &[12, 6, 10, 0],
         objects: &[7, 1, 3, 4, 12],
-        atmos: &[0, 4, 2],
+        atmos: &[0, 4, 2, 10],
     },
 ];
 
@@ -788,14 +792,23 @@ const OBJECT_VIBE: [Spot; 13] = [
     (0.0, -0.8),
     (-0.2, 0.6),
 ];
-/// none, storm, smoke, fire, beams, aurora
-const ATMOS_VIBE: [Spot; 6] = [
+/// none, storm, smoke, fire, beams, aurora, snow, rain, bubbles, fireflies,
+/// rays, caustics, flares, meteors
+const ATMOS_VIBE: [Spot; 14] = [
     (0.0, -0.9),
     (-0.7, 0.6),
     (-0.6, -0.5),
     (-0.3, 0.9),
     (0.4, 0.8),
     (0.6, -0.6),
+    (0.5, -0.3),
+    (-0.4, 0.0),
+    (0.6, 0.1),
+    (-0.2, -0.3),
+    (0.3, 0.2),
+    (0.2, -0.2),
+    (0.6, 0.6),
+    (-0.1, -0.1),
 ];
 
 /// The least a thing far from the vibe still weighs against one right on it:
@@ -2129,8 +2142,9 @@ mod tests {
             unlucky.len() <= 1,
             "seeds that missed a pattern: {unlucky:?}"
         );
+        // Twenty backgrounds: all within an hour.
         let mut d = Director::new(15);
-        let frames = play(&mut d, 0, 4096);
+        let frames = play(&mut d, 0, 8192);
         let mut bgs: Vec<usize> = frames.iter().map(|(_, o)| o.to.bg).collect();
         bgs.sort();
         bgs.dedup();
@@ -2174,9 +2188,9 @@ mod tests {
 
     #[test]
     fn atmospheres_come_and_go_with_the_themes() {
-        // Half an hour at 128 BPM.
+        // Two hours at 128 BPM: fourteen atmospheres, each tied to a few themes.
         let mut d = Director::new(24);
-        let frames = play(&mut d, 0, 4096);
+        let frames = play(&mut d, 0, 16384);
         let mut seen: Vec<usize> = frames.iter().map(|(_, o)| o.to.atmos).collect();
         seen.sort();
         seen.dedup();
