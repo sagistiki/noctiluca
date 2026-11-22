@@ -9,6 +9,7 @@ pub mod mapping_page;
 pub mod network_page;
 pub mod settings_page;
 pub mod venues;
+pub mod widgets;
 pub mod style;
 
 use std::sync::Arc;

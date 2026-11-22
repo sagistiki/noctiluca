@@ -5,7 +5,9 @@
 use egui::{Color32, CornerRadius, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 
 use super::icons::{self, Icon};
+use super::lights_page;
 use super::style;
+use super::widgets;
 use super::{Live, PageState, UiAction};
 use crate::app_state::{Action, AppState};
 use crate::director::THEMES;
@@ -54,8 +56,9 @@ fn program_column(ui: &mut Ui, state: &AppState, settings: &mut Settings, live: 
     // The program: as big as fits above the pads, in the picture's shape.
     let avail = ui.available_rect_before_wrap();
     let pads_h = 84.0;
+    let strip_h = LIGHTS_STRIP_H;
     let aspect = if live.preview_aspect > 0.0 { live.preview_aspect } else { 16.0 / 9.0 };
-    let room = vec2(avail.width(), (avail.height() - pads_h - style::GAP).max(120.0));
+    let room = vec2(avail.width(), (avail.height() - pads_h - strip_h - 2.0 * style::GAP).max(120.0));
     let size = if room.x / room.y > aspect { vec2(room.y * aspect, room.y) } else { vec2(room.x, room.x / aspect) };
     let monitor = Rect::from_min_size(pos2(avail.center().x - size.x / 2.0, avail.top()), size);
     let p = ui.painter();
@@ -91,13 +94,86 @@ fn program_column(ui: &mut Ui, state: &AppState, settings: &mut Settings, live: 
     // The pads.
     let pads_rect = Rect::from_min_max(pos2(avail.left(), monitor.bottom() + style::GAP), pos2(avail.right(), monitor.bottom() + style::GAP + pads_h));
     ui.scope_builder(egui::UiBuilder::new().max_rect(pads_rect), |ui| pads(ui, state, settings, live, pages, actions));
+    // The lights, as a strip under the pads: how they are doing right now.
+    let strip = Rect::from_min_size(pos2(avail.left(), pads_rect.bottom() + style::GAP - 10.0), vec2(avail.width(), strip_h));
+    lights_strip(ui, strip, settings, live, actions);
 }
 
-/// Text centred at `at`, at `size` or smaller so it fits in `max_w`.
-fn fit_text(p: &egui::Painter, at: egui::Pos2, text: &str, size: f32, family: egui::FontFamily, colour: Color32, max_w: f32) {
-    let galley = p.layout_no_wrap(text.to_string(), egui::FontId::new(size, family.clone()), colour);
-    let size = if galley.size().x > max_w { (size * max_w / galley.size().x).max(7.5) } else { size };
-    p.text(at, egui::Align2::CENTER_CENTER, text, egui::FontId::new(size, family), colour);
+/// The height of the lights strip on the Live page.
+const LIGHTS_STRIP_H: f32 = 40.0;
+
+/// A glance at the DMX lights from Live: the interface, the effect playing,
+/// Drive, and each light's colour now. Clicking it opens the Lights page.
+fn lights_strip(ui: &mut Ui, rect: Rect, settings: &Settings, live: &Live, actions: &mut Vec<UiAction>) {
+    use crate::app_state::Page;
+    let l = &settings.lighting;
+    let r = ui.interact(rect, ui.scope_id().with("lights strip"), Sense::click());
+    let p = ui.painter();
+    p.rect(rect, CornerRadius::same(9), if r.hovered() { style::CARD_LIGHT } else { style::CARD }, Stroke::new(1.0, style::LINE), egui::StrokeKind::Inside);
+    let y = rect.center().y;
+    let mut x = rect.left() + 14.0;
+    let small = |ui: &Ui, x: f32, icon: Icon, colour: Color32| icons::paint(ui, Rect::from_center_size(pos2(x + 7.0, y), vec2(14.0, 14.0)), icon, colour);
+    let text = |ui: &Ui, x: f32, t: &str, colour: Color32, bold: bool| -> f32 {
+        let family = if bold { egui::FontFamily::Name("semibold".into()) } else { egui::FontFamily::Proportional };
+        ui.painter().text(pos2(x, y), egui::Align2::LEFT_CENTER, t, egui::FontId::new(12.5, family), colour).width()
+    };
+    small(ui, x, Icon::Spot, style::TEXT);
+    x += 22.0;
+    x += text(ui, x, "Lights", style::TEXT, true) + 14.0;
+    if l.fixtures.is_empty() {
+        text(ui, x, "None set up yet: open Lights to add them", style::MUTED, false);
+    } else {
+        // The interface.
+        let (dot, state) = match &live.dmx {
+            Some(d) if d.sending => (style::GREEN, d.kind.unwrap_or("DMX")),
+            Some(_) => (style::RED, "No interface"),
+            None => (style::TERTIARY, "Off"),
+        };
+        ui.painter().circle_filled(pos2(x + 4.0, y), 4.0, dot);
+        x += 14.0;
+        x += text(ui, x, state, style::MUTED, false) + 16.0;
+        // What they play.
+        if l.blackout {
+            small(ui, x, Icon::Moon, style::RED);
+            x += 20.0;
+            x += text(ui, x, "Lights out", style::RED, true) + 16.0;
+        } else if let Some(e) = live.light_effect {
+            small(ui, x, lights_page::effect_icon(e), style::CYAN);
+            x += 20.0;
+            x += text(ui, x, e.name(), style::TEXT, true) + 6.0;
+            x += text(ui, x, if l.effect.is_none() { "Auto" } else { "locked" }, style::TERTIARY, false) + 16.0;
+        }
+        let word = match (l.drive * 4.0).round() as i32 {
+            0 => "Subtle",
+            1 => "Soft",
+            2 => "Normal",
+            3 => "Strong",
+            _ => "Wild",
+        };
+        small(ui, x, Icon::Gauge, style::MUTED);
+        x += 20.0;
+        x += text(ui, x, word, style::MUTED, false) + 18.0;
+        // Each light's colour now, as long as there is room before the arrow.
+        let end = rect.right() - 40.0;
+        for (i, f) in l.fixtures.iter().enumerate() {
+            if x + 20.0 > end {
+                break;
+            }
+            let c = pos2(x + 8.0, y);
+            if f.is_smoke() {
+                icons::paint(ui, Rect::from_center_size(c, vec2(14.0, 14.0)), Icon::Smoke, style::MUTED);
+            } else {
+                let colour = lights_page::rgb(live.lights.get(i).copied().unwrap_or([0.0; 3]));
+                ui.painter().circle_filled(c, 10.0, colour.gamma_multiply(0.18));
+                ui.painter().circle(c, 6.5, colour, Stroke::new(1.0, Color32::from_white_alpha(50)));
+            }
+            x += 22.0;
+        }
+    }
+    icons::paint(ui, Rect::from_center_size(pos2(rect.right() - 20.0, y), vec2(14.0, 14.0)), Icon::Next, if r.hovered() { style::TEXT } else { style::TERTIARY });
+    if r.on_hover_text("Open Lights").clicked() {
+        actions.push(UiAction::App(Action::Open(Page::Lights)));
+    }
 }
 
 /// The director's pad: "Director" over its state, Auto (changing by itself)
@@ -109,9 +185,9 @@ fn director_pad(ui: &mut Ui, w: f32, word: &str, sub: &str, auto: bool) -> egui:
     let p = ui.painter();
     p.rect(rect, CornerRadius::same(9), fill, Stroke::new(1.5, edge), egui::StrokeKind::Inside);
     let room = rect.width() - 10.0;
-    fit_text(p, rect.center_top() + vec2(0.0, 14.0), "Director", 10.5, egui::FontFamily::Proportional, style::MUTED, room);
-    fit_text(p, rect.center() + vec2(0.0, 1.0), word, 16.0, egui::FontFamily::Name("semibold".into()), edge, room);
-    fit_text(p, rect.center() + vec2(0.0, 22.0), sub, 10.0, egui::FontFamily::Proportional, style::TERTIARY, room);
+    widgets::fit_text(p, rect.center_top() + vec2(0.0, 14.0), "Director", 10.5, egui::FontFamily::Proportional, style::MUTED, room);
+    widgets::fit_text(p, rect.center() + vec2(0.0, 1.0), word, 16.0, egui::FontFamily::Name("semibold".into()), edge, room);
+    widgets::fit_text(p, rect.center() + vec2(0.0, 22.0), sub, 10.0, egui::FontFamily::Proportional, style::TERTIARY, room);
     if auto {
         // A slow pulse: it is working.
         let t = ui.input(|i| i.time) as f32;
@@ -120,22 +196,6 @@ fn director_pad(ui: &mut Ui, w: f32, word: &str, sub: &str, auto: bool) -> egui:
         ui.ctx().request_repaint();
     }
     r.on_hover_text(if auto { "Auto: the looks change by themselves, on phrases, following the vibe. Press to hold this look." } else { "Held: nothing changes on its own. Press to go back to Auto." })
-}
-
-/// One pad: an icon, a name, its key; lit when on.
-fn pad(ui: &mut Ui, w: f32, icon: Icon, name: &str, key: &str, on: bool, tip: &str) -> egui::Response {
-    let (rect, r) = ui.allocate_exact_size(vec2(w, 74.0), Sense::click());
-    let hovered = r.hovered();
-    let fill = if on { style::ACCENT } else if hovered { style::LINE } else { style::CARD_LIGHT };
-    let p = ui.painter();
-    p.rect(rect, CornerRadius::same(9), fill, Stroke::new(1.0, if on { style::ACCENT } else { style::LINE }), egui::StrokeKind::Inside);
-    let fg = if on { Color32::WHITE } else { style::TEXT };
-    icons::paint(ui, Rect::from_center_size(rect.center() - vec2(0.0, 14.0), vec2(18.0, 18.0)), icon, fg);
-    let p = ui.painter();
-    let room = rect.width() - 10.0;
-    fit_text(p, rect.center() + vec2(0.0, 7.0), name, 12.0, egui::FontFamily::Name("semibold".into()), fg, room);
-    fit_text(p, rect.center() + vec2(0.0, 23.0), key, 10.5, egui::FontFamily::Proportional, if on { Color32::from_white_alpha(200) } else { style::TERTIARY }, room);
-    r.on_hover_text(tip)
 }
 
 fn pads(ui: &mut Ui, state: &AppState, settings: &mut Settings, live: &Live, pages: &mut PageState, actions: &mut Vec<UiAction>) {
@@ -150,33 +210,33 @@ fn pads(ui: &mut Ui, state: &AppState, settings: &mut Settings, live: &Live, pag
         if director_pad(ui, w, word, sub, !live.look_held).clicked() {
             actions.push(UiAction::HoldLook);
         }
-        if pad(ui, w, Icon::Next, "Next look", "Space", false, "A new look now (the director changes theme, background and pattern)").clicked() {
+        if widgets::pad(ui, vec2(w, 74.0), Icon::Next, "Next look", "Space", false, "A new look now (the director changes theme, background and pattern)").clicked() {
             actions.push(UiAction::NextLook);
         }
-        if pad(ui, w, Icon::Palette, "Palette", "P", false, "The next colour palette").clicked() {
+        if widgets::pad(ui, vec2(w, 74.0), Icon::Palette, "Palette", "P", false, "The next colour palette").clicked() {
             actions.push(UiAction::NextPalette);
         }
-        if pad(ui, w, Icon::Bolt, "Strobe", "S", settings.strobe, "Flashes on or off (never more than three a second)").clicked() {
+        if widgets::pad(ui, vec2(w, 74.0), Icon::Bolt, "Strobe", "S", settings.strobe, "Flashes on or off (never more than three a second)").clicked() {
             settings.strobe = !settings.strobe;
         }
         let dark = settings.lighting.blackout;
-        if pad(ui, w, Icon::Moon, "Lights out", "", dark, "Every DMX light dark; the screens go on").clicked() {
+        if widgets::pad_coloured(ui, vec2(w, 74.0), Icon::Moon, "Lights out", "", dark, style::RED.gamma_multiply(0.75), "Every DMX light dark; the screens go on").clicked() {
             settings.lighting.blackout = !dark;
         }
         let has_smoke = settings.lighting.fixtures.iter().any(|f| f.is_smoke());
         let held = pages.lights.smoke_held;
-        let smoke = ui.add_enabled_ui(has_smoke, |ui| pad(ui, w, Icon::Smoke, "Smoke", "hold", held, if has_smoke { "Smoke while held" } else { "No smoke machine set up (Lights)" })).inner;
+        let smoke = ui.add_enabled_ui(has_smoke, |ui| widgets::pad(ui, vec2(w, 74.0), Icon::Smoke, "Smoke", "hold", held, if has_smoke { "Smoke while held" } else { "No smoke machine set up (Lights)" })).inner;
         pages.lights.smoke_held = smoke.is_pointer_button_down_on() && has_smoke;
         if pages.lights.smoke_held && settings.lighting.smoke == SmokeMode::Off {
             settings.lighting.smoke = SmokeMode::Hand;
         }
         let grid = settings.output.outputs.iter().all(|o| o.showing == OutputPattern::Grid);
-        if pad(ui, w, Icon::Grid, "Grid", "", grid, "The calibration grid on every output, instead of the show").clicked() {
+        if widgets::pad(ui, vec2(w, 74.0), Icon::Grid, "Grid", "", grid, "The calibration grid on every output, instead of the show").clicked() {
             for o in &mut settings.output.outputs {
                 o.showing = if grid { OutputPattern::Show } else { OutputPattern::Grid };
             }
         }
-        if pad(ui, w, Icon::Expand, "Full screen", "F", state.show_here, "The show full screen on this display (Esc comes back)").clicked() {
+        if widgets::pad(ui, vec2(w, 74.0), Icon::Expand, "Full screen", "F", state.show_here, "The show full screen on this display (Esc comes back)").clicked() {
             actions.push(UiAction::App(Action::PreviewHere));
         }
     });

@@ -45,6 +45,23 @@ pub enum Icon {
     Smoke,
     Hold,
     Power,
+    /// The Lights page.
+    Sparkle,
+    Burst,
+    Split,
+    Wave,
+    Chase,
+    Breathe,
+    Riser,
+    Sun,
+    Gauge,
+    Clock,
+    Plug,
+    Target,
+    Search,
+    BoltOff,
+    Bolts,
+    Warning,
 }
 
 /// Draws `icon` inside `rect` in `colour`.
@@ -90,6 +107,98 @@ pub fn paint(ui: &Ui, rect: Rect, icon: Icon, colour: Color32) {
         p.add(Shape::convex_polygon(head, colour, Stroke::NONE));
     };
     match icon {
+        Icon::Sparkle => {
+            // A four-pointed star, and a small one beside it: automatic.
+            let star = |cx: f32, cy: f32, r: f32| {
+                let k = 0.28;
+                vec![at(cx, cy - r), at(cx + r * k, cy - r * k), at(cx + r, cy), at(cx + r * k, cy + r * k), at(cx, cy + r), at(cx - r * k, cy + r * k), at(cx - r, cy), at(cx - r * k, cy - r * k)]
+            };
+            p.add(poly(star(-0.15, 0.1, 0.75), true));
+            p.add(Shape::closed_line(star(0.6, -0.6, 0.3), thin));
+        }
+        Icon::Burst => {
+            p.circle_filled(c, s * 0.12, colour);
+            for k in 0..8 {
+                let a = k as f32 * std::f32::consts::TAU / 8.0;
+                p.add(poly(vec![at(0.35 * a.cos(), 0.35 * a.sin()), at(0.85 * a.cos(), 0.85 * a.sin())], false));
+            }
+        }
+        Icon::Split => {
+            p.circle_stroke(c, s * 0.42, line);
+            let half: Vec<Pos2> = arc(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2, 0.84);
+            p.add(Shape::convex_polygon(half, colour, Stroke::NONE));
+            p.add(poly(vec![at(0.0, -0.84), at(0.0, 0.84)], false));
+        }
+        Icon::Wave => {
+            let pts: Vec<Pos2> = (0..=24).map(|k| { let t = k as f32 / 24.0 * 2.0 - 1.0; at(t * 0.9, -0.45 * (t * std::f32::consts::PI * 1.5).sin()) }).collect();
+            p.add(Shape::line(pts, line));
+        }
+        Icon::Chase => {
+            for (k, x) in [-0.7f32, -0.15, 0.4].into_iter().enumerate() {
+                let r = s * (0.07 + 0.035 * k as f32);
+                p.circle_filled(at(x, 0.0), r, colour.gamma_multiply(0.45 + 0.27 * k as f32));
+            }
+            p.add(poly(vec![at(0.62, -0.32), at(0.9, 0.0), at(0.62, 0.32)], false));
+        }
+        Icon::Breathe => {
+            p.circle_stroke(c, s * 0.42, line);
+            p.circle_stroke(c, s * 0.24, thin);
+            p.circle_filled(c, s * 0.08, colour);
+        }
+        Icon::Riser => {
+            for (k, h) in [0.35f32, 0.6, 0.85].into_iter().enumerate() {
+                let x = -0.6 + 0.55 * k as f32;
+                p.add(poly(vec![at(x, 0.85), at(x, 0.85 - 2.0 * h * 0.85)], false));
+            }
+            p.add(poly(vec![at(0.35, -0.6), at(0.65, -0.88), at(0.92, -0.6)], false));
+        }
+        Icon::Sun => {
+            p.circle_stroke(c, s * 0.22, line);
+            for k in 0..8 {
+                let a = k as f32 * std::f32::consts::TAU / 8.0;
+                p.add(Shape::line(vec![at(0.62 * a.cos(), 0.62 * a.sin()), at(0.88 * a.cos(), 0.88 * a.sin())], thin));
+            }
+        }
+        Icon::Gauge => {
+            p.add(Shape::line(arc(std::f32::consts::PI * 0.85, std::f32::consts::PI * 2.15, 0.82), line));
+            p.add(poly(vec![at(0.0, 0.25), at(0.45, -0.35)], false));
+            p.circle_filled(at(0.0, 0.25), s * 0.08, colour);
+        }
+        Icon::Clock => {
+            p.circle_stroke(c, s * 0.42, line);
+            p.add(poly(vec![at(0.0, -0.5), at(0.0, 0.0), at(0.35, 0.25)], false));
+        }
+        Icon::Plug => {
+            p.add(poly(vec![at(-0.45, -0.25), at(0.45, -0.25), at(0.45, 0.15), at(0.0, 0.55), at(-0.45, 0.15)], true));
+            p.add(poly(vec![at(-0.2, -0.25), at(-0.2, -0.75)], false));
+            p.add(poly(vec![at(0.2, -0.25), at(0.2, -0.75)], false));
+            p.add(poly(vec![at(0.0, 0.55), at(0.0, 0.9)], false));
+        }
+        Icon::Target => {
+            p.circle_stroke(c, s * 0.42, line);
+            p.circle_filled(c, s * 0.1, colour);
+            for (x, y) in [(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)] {
+                p.add(Shape::line(vec![at(x * 0.6, y * 0.6), at(x * 0.95, y * 0.95)], thin));
+            }
+        }
+        Icon::Search => {
+            p.circle_stroke(at(-0.15, -0.15), s * 0.3, line);
+            p.add(poly(vec![at(0.3, 0.3), at(0.85, 0.85)], false));
+        }
+        Icon::BoltOff => {
+            p.add(Shape::closed_line(vec![at(0.15, -0.9), at(-0.55, 0.15), at(0.0, 0.15), at(-0.15, 0.9), at(0.55, -0.15), at(0.0, -0.15)], thin));
+            p.add(poly(vec![at(-0.85, -0.85), at(0.85, 0.85)], false));
+        }
+        Icon::Bolts => {
+            let bolt = |dx: f32| vec![at(0.1 + dx, -0.85), at(-0.4 + dx, 0.1), at(-0.02 + dx, 0.1), at(-0.12 + dx, 0.85), at(0.4 + dx, -0.12), at(0.02 + dx, -0.12)];
+            p.add(poly(bolt(-0.32), true));
+            p.add(poly(bolt(0.42), true));
+        }
+        Icon::Warning => {
+            p.add(poly(vec![at(0.0, -0.85), at(0.9, 0.75), at(-0.9, 0.75)], true));
+            p.add(poly(vec![at(0.0, -0.3), at(0.0, 0.2)], false));
+            p.circle_filled(at(0.0, 0.48), s * 0.06, colour);
+        }
         Icon::Transform => {
             p.add(Shape::dashed_line(
                 &[
