@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://sagistiki.github.io/noctiluca/"><b>sagistiki.github.io/noctiluca</b></a><br><br>
   <b>A live club visualizer for macOS.</b><br>
   It listens to the room, finds the kick, reads the vibe, and plays the night<br>
   on screens, projectors, TV boxes and DMX lights, in sync.<br>
@@ -182,6 +183,7 @@ src/
   dmx.rs         Open DMX / Enttec Pro over USB serial
   ui/            the control window (egui)
 shaders/         WGSL, reloaded live while you edit them
+site/            the website (GitHub Pages, published by .github/workflows/pages.yml)
 assets/models/   the 3D objects (glTF), made in Blender (blender/build_models.py)
 android/         the TV box receiver
 docs/brand/      the icon and banners as SVG/HTML, rendered by render.sh

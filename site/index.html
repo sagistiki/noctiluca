@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Noctiluca · a live club visualizer for macOS</title>
+<meta name="description" content="Noctiluca listens to the room, finds the kick, reads the vibe and plays the night on screens, projectors, Android TV boxes and DMX lights, in sync. Free and open source for macOS.">
+<meta name="theme-color" content="#01060F">
+<meta property="og:title" content="Noctiluca · Sound becomes light">
+<meta property="og:description" content="A live club visualizer for macOS: screens, projectors, TV boxes and DMX lights, in sync with the music. Free and open source.">
+<meta property="og:image" content="https://sagistiki.github.io/noctiluca/assets/img/og.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/icon-32.png">
+<link rel="apple-touch-icon" href="assets/img/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F6EFE3"/>
+      <stop offset=".45" stop-color="#8EC5FF"/>
+      <stop offset="1" stop-color="#2E7CF6"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="progress" aria-hidden="true"><span></span></div>
+
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top" aria-label="Noctiluca, back to top">
+      <img src="assets/img/icon-180.png" alt="" width="30" height="30">
+      <span>NOCTILUCA</span>
+    </a>
+    <nav class="links" aria-label="Sections">
+      <a href="#listens">How it works</a>
+      <a href="#looks">Looks</a>
+      <a href="#rig">The rig</a>
+      <a href="#download">Download</a>
+    </nav>
+    <a class="btn btn-ghost btn-sm gh" href="https://github.com/sagistiki/noctiluca" rel="noopener">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+      <span>GitHub</span>
+      <span class="stars" data-stars hidden></span>
+    </a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- Hero: the night sea, drawn live -->
+  <section class="hero">
+    <canvas class="sea" aria-hidden="true"></canvas>
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="wrap hero-in">
+      <p class="eyebrow" data-reveal>Free and open source · macOS</p>
+      <h1 class="wordmark" data-reveal style="--d:.08s">NOCTILUCA</h1>
+      <p class="tagline" data-reveal style="--d:.16s">Sound becomes light.</p>
+      <p class="lede" data-reveal style="--d:.24s">A live club visualizer. It listens to the room, finds the kick, reads the vibe, and plays the night on screens, projectors, TV boxes and DMX lights, all on the same beat.</p>
+      <div class="cta" data-reveal style="--d:.32s">
+        <a class="btn btn-primary btn-lg" data-asset="macos" href="https://github.com/sagistiki/noctiluca/releases/latest">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9s-2.1-.9-3.4-.9c-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1ZM13.9 4.9c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.5-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.4Z"/></svg>
+          <span class="btn-text"><b>Download for Mac</b><small data-asset-meta="macos">Apple silicon · macOS 13+</small></span>
+        </a>
+        <a class="btn btn-ghost btn-lg" href="https://github.com/sagistiki/noctiluca" rel="noopener">
+          <span class="btn-text"><b>View the source</b><small>MIT licence · Rust</small></span>
+        </a>
+      </div>
+      <p class="release-line" data-reveal style="--d:.4s"><span class="dot"></span><span data-release>Latest release</span></p>
+    </div>
+    <a class="scroll-cue" href="#show" aria-label="Scroll down"><span></span></a>
+  </section>
+
+  <!-- The show, playing -->
+  <section id="show" class="showcase">
+    <div class="wrap">
+      <figure class="screen" data-reveal data-parallax="-0.04">
+        <video src="assets/video/show.mp4" poster="assets/video/show-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Noctiluca playing: a mirror ball turning to the music"></video>
+        <figcaption>Playing to a kick at 128 BPM: the mirror ball turns once every 32 beats and sparkles with the hi-hats.</figcaption>
+      </figure>
+      <ul class="stats" aria-label="The look library">
+        <li data-reveal><b data-count="19">19</b><span>themes</span></li>
+        <li data-reveal style="--d:.05s"><b data-count="20">20</b><span>backgrounds</span></li>
+        <li data-reveal style="--d:.1s"><b data-count="22">22</b><span>patterns</span></li>
+        <li data-reveal style="--d:.15s"><b data-count="24">24</b><span>3D objects</span></li>
+        <li data-reveal style="--d:.2s"><b data-count="13">13</b><span>atmospheres</span></li>
+        <li data-reveal style="--d:.25s"><b data-count="19">19</b><span>effects</span></li>
+        <li data-reveal style="--d:.3s"><b data-count="22">22</b><span>palettes</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="listens" class="section">
+    <div class="wrap">
+      <header class="head" data-reveal>
+        <p class="kicker">How it works</p>
+        <h2>It hears the room the way a VJ would.</h2>
+        <p class="sub">A microphone is enough. Everything below happens by itself, live, and you can take any of it over by hand.</p>
+      </header>
+      <div class="cards">
+        <article class="card" data-reveal>
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 24h6l3-9 5 22 5-30 5 26 4-14 3 5h9"/></svg></div>
+          <h3>Listens</h3>
+          <p>Tracks the tempo and the beat grid, hears every kick, and knows the section: groove, build, drop, breakdown.</p>
+        </article>
+        <article class="card" data-reveal style="--d:.06s">
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M24 7v34M7 24h34"/><circle cx="31" cy="15" r="3.2"/></svg></div>
+          <h3>Reads the vibe</h3>
+          <p>Dark or bright, calm or intense, smooth or raw, measured over the last seconds. The looks follow it.</p>
+        </article>
+        <article class="card" data-reveal style="--d:.12s">
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="9" width="36" height="24" rx="3"/><path d="M14 39h20M24 33v6"/><path d="M15 26l6-7 5 5 7-9"/></svg></div>
+          <h3>Directs itself</h3>
+          <p>Picks themes, backgrounds, patterns, objects and effects, changing on phrases. Fades, ink wipes, a flight through the old look on the drop.</p>
+        </article>
+        <article class="card" data-reveal style="--d:.18s">
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="12" width="17" height="12" rx="2"/><rect x="27" y="12" width="17" height="12" rx="2"/><path d="M12 30l-5 9M36 30l5 9M24 30v10"/><circle cx="24" cy="30" r="2"/></svg></div>
+          <h3>Plays anywhere</h3>
+          <p>Up to four outputs: projectors, displays, Android TV boxes over Wi-Fi, and DMX lights over USB.</p>
+        </article>
+        <article class="card" data-reveal style="--d:.24s">
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12l14-4 18 6-2 22-16 4-14-6z"/><path d="M22 8l0 32M8 12l30 2"/><circle cx="8" cy="12" r="2.4"/><circle cx="40" cy="14" r="2.4"/><circle cx="38" cy="36" r="2.4"/><circle cx="6" cy="34" r="2.4"/></svg></div>
+          <h3>Maps the room</h3>
+          <p>Eight surfaces pinned onto walls, pillars and ceilings, true perspective, never stretched.</p>
+        </article>
+        <article class="card" data-reveal style="--d:.3s">
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5l15 6v11c0 10-6.5 17.5-15 21-8.5-3.5-15-11-15-21V11z"/><path d="M26 15l-6 10h7l-5 9"/></svg></div>
+          <h3>Keeps people safe</h3>
+          <p>Never more than three flashes a second, on screen and in the lights, whatever the music does.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Looks -->
+  <section id="looks" class="section looks">
+    <div class="wrap">
+      <header class="head" data-reveal>
+        <p class="kicker">The look library</p>
+        <h2>From clean and minimal to <span class="grad">luxe</span> to heavy.</h2>
+        <p class="sub">Nineteen themes, each a world the director builds looks from: gold room, marble hall, night sea, acid warehouse, deep space, cathedral and more.</p>
+      </header>
+    </div>
+    <div class="marquee" aria-label="Looks from the show">
+      <div class="track">
+        <img src="assets/img/look1.webp" alt="A chrome mirror ball in a cyan tunnel" loading="lazy" width="640" height="360">
+        <img src="assets/img/obj-jellyfish.webp" alt="Glass jellyfish over a glowing night sea" loading="lazy" width="640" height="360">
+        <img src="assets/img/look2.webp" alt="Amber beams over a laser grid" loading="lazy" width="640" height="360">
+        <img src="assets/img/obj-rose.webp" alt="A chrome rose on silk" loading="lazy" width="640" height="360">
+        <img src="assets/img/look5.webp" alt="A violet corridor in a lightning storm" loading="lazy" width="640" height="360">
+        <img src="assets/img/obj-bust.webp" alt="A classical bust on black marble" loading="lazy" width="640" height="360">
+        <img src="assets/img/look3.webp" alt="Red shards in liquid" loading="lazy" width="640" height="360">
+        <img src="assets/img/obj-diamond.webp" alt="Diamonds orbiting a large one" loading="lazy" width="640" height="360">
+        <img src="assets/img/look6.webp" alt="A golden knot over fire" loading="lazy" width="640" height="360">
+        <img src="assets/img/obj-astronaut.webp" alt="An astronaut floating in a nebula" loading="lazy" width="640" height="360">
+        <img src="assets/img/look4.webp" alt="Glass spheres over pale rings" loading="lazy" width="640" height="360">
+        <img src="assets/img/obj-cubes.webp" alt="A swarm of chrome cubes over an LED tunnel" loading="lazy" width="640" height="360">
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="chips" data-reveal>
+        <span>Night sea</span><span>Marble</span><span>Nebula</span><span>Mirror room</span><span>LED tunnel</span><span>Mercury</span><span>Fractal dive</span><span>Lasers through haze</span><span>Silk</span><span>Flower of life</span><span>Mandala</span><span>String art</span><span>Datamosh</span><span>Iridescent</span><span>Slit scan</span><span>Caustics</span><span>Fireflies</span><span>Shooting stars</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- The rig -->
+  <section id="rig" class="section">
+    <div class="wrap">
+      <header class="head" data-reveal>
+        <p class="kicker">The rig</p>
+        <h2>One Mac runs the whole room.</h2>
+      </header>
+
+      <div class="feature" data-reveal>
+        <div class="feature-media" data-parallax="-0.03"><img src="assets/img/app-live.webp" alt="The Live page: program, pads, inspector and the set's timeline" loading="lazy" width="1800" height="1125"></div>
+        <div class="feature-text">
+          <span class="num">01</span>
+          <h3>Live</h3>
+          <p>The program, performance pads and an inspector for the look, the sound and the outputs, in a control window built like a pro audio app. A timeline keeps the last twenty minutes: sections, looks, light effects.</p>
+          <ul class="ticks"><li>Director on Auto, or hold the look</li><li>Next look, palette, strobe, lights out, smoke</li><li>Microphone sensitivity, sync offset per room</li></ul>
+        </div>
+      </div>
+
+      <div class="feature flip" data-reveal>
+        <div class="feature-media" data-parallax="-0.03"><img src="assets/img/app-screens.webp" alt="Three keystoned surfaces on one projector" loading="lazy" width="1800" height="1125"></div>
+        <div class="feature-text">
+          <span class="num">02</span>
+          <h3>Projection mapping</h3>
+          <p>Up to eight surfaces on four outputs. Transform and corner-pin tools, real perspective, and a calibration grid projected right onto the wall. Main surfaces, copies, or complements that share the colour and the beat but show another picture.</p>
+          <ul class="ticks"><li>Ceilings and walls seen from the side</li><li>Mirror, chase and echo complements</li><li>Live mapping on the wall itself</li></ul>
+        </div>
+      </div>
+
+      <div class="feature" data-reveal>
+        <div class="feature-media" data-parallax="-0.03"><img src="assets/img/app-lights.webp" alt="The Lights page: interface, effects, Drive, lights and smoke" loading="lazy" width="1800" height="1125"></div>
+        <div class="feature-text">
+          <span class="num">03</span>
+          <h3>DMX lights</h3>
+          <p>Open DMX and Enttec Pro style USB interfaces, told apart automatically. Seven light effects that follow the section, one Drive slider from subtle to wild, strobe and smoke on the drop, through the same safety limit as the screens.</p>
+          <ul class="ticks"><li>RGB, RGBW, 7-channel spots, smoke machines</li><li>A channel finder for lost manuals</li><li>Auto effect, or lock one</li></ul>
+        </div>
+      </div>
+
+      <div class="bento">
+        <article class="tile" data-reveal>
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="9" width="38" height="24" rx="3"/><path d="M17 39h14"/><path d="M33 3l-5 6M15 3l5 6"/></svg></div>
+          <h3>Network screens</h3>
+          <p>Any Android TV box on the Wi-Fi becomes an output. Noctiluca installs a small receiver app on it and streams from the Mac's hardware encoder, drawn ahead by the measured delay so it lands on the beat.</p>
+        </article>
+        <article class="tile" data-reveal style="--d:.08s">
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 5h17l9 9v29H12z"/><path d="M29 5v9h9"/><path d="M18 24h14M18 30h14M18 36h9"/></svg></div>
+          <h3>Venues are files</h3>
+          <p>Everything set up for a place in one readable <code>name_nocvenue.json</code>. Open, Save and Save As as in any Mac app, or drop the file on the window.</p>
+        </article>
+        <article class="tile" data-reveal style="--d:.16s">
+          <div class="ic"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6c-6 8-12 12-12 21a12 12 0 0 0 24 0c0-9-6-13-12-21z"/><path d="M18 30a6 6 0 0 0 6 6"/></svg></div>
+          <h3>Flash safety</h3>
+          <p>Fast flashing can trigger seizures. Every flash goes through one limiter: at most three a second (WCAG 2.3.1). Anything faster becomes a shallow shimmer.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section id="download" class="section download">
+    <div class="wrap">
+      <div class="dl" data-reveal>
+        <div class="dl-art" aria-hidden="true"><img src="assets/img/icon-512.png" alt="" width="200" height="200"></div>
+        <div class="dl-body">
+          <p class="kicker">Download</p>
+          <h2>Get <span class="grad">Noctiluca</span> <span data-version></span></h2>
+          <p class="sub" data-release-date>Free, for Macs with Apple silicon on macOS 13 or later.</p>
+          <div class="dl-buttons">
+            <a class="btn btn-primary btn-lg" data-asset="macos" href="https://github.com/sagistiki/noctiluca/releases/latest">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9s-2.1-.9-3.4-.9c-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4.1ZM13.9 4.9c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.5-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.4Z"/></svg>
+              <span class="btn-text"><b>macOS app</b><small data-asset-meta="macos">Apple silicon · .zip</small></span>
+            </a>
+            <a class="btn btn-ghost btn-lg" data-asset="apk" href="https://github.com/sagistiki/noctiluca/releases/latest">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" d="M3 6h18v11H3zM8 21h8M12 17v4"/></svg>
+              <span class="btn-text"><b>TV box receiver</b><small data-asset-meta="apk">Android TV · .apk</small></span>
+            </a>
+          </div>
+          <ol class="steps">
+            <li><b>Unzip</b> and move Noctiluca.app to Applications.</li>
+            <li><b>Open it once.</b> It is not notarized by Apple, so then go to System Settings → Privacy &amp; Security and press <em>Open Anyway</em>.</li>
+            <li><b>Allow the microphone</b>, and the local network if you use TV boxes. For the boxes, install adb once: <code>brew install android-platform-tools</code>.</li>
+          </ol>
+          <div class="build">
+            <span class="kicker">Or build from source</span>
+            <div class="code"><code id="src">git clone https://github.com/sagistiki/noctiluca &amp;&amp; cd noctiluca &amp;&amp; cargo run --release</code><button class="copy" type="button" data-copy="#src" aria-label="Copy the command">Copy</button></div>
+          </div>
+          <p class="more"><a href="https://github.com/sagistiki/noctiluca/releases">All releases and notes →</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="foot-brand"><img src="assets/img/icon-180.png" alt="" width="26" height="26"><span>NOCTILUCA</span></div>
+    <p>Free and open source under the MIT licence. Made for the dance floor.</p>
+    <p class="fine">Skull: Khronos glTF Sample Assets (CC0). Bust: Poly Haven (CC0). Astronaut: courtesy of NASA. Fonts: Outfit, Inter, JetBrains Mono (OFL).</p>
+    <a class="btn btn-ghost btn-sm" href="https://github.com/sagistiki/noctiluca" rel="noopener">github.com/sagistiki/noctiluca</a>
+  </div>
+</footer>
+
+<script src="sea.js" defer></script>
+<script src="main.js" defer></script>
+</body>
+</html>
