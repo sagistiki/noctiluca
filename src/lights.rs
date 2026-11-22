@@ -457,7 +457,8 @@ pub enum LightStrobe {
     Off,
     /// The drop's first beat, and bar starts during drops.
     Drops,
-    /// Also every beat at the top of a build.
+    /// More often through drops: every beat or two. (Builds never flash:
+    /// they are lit like a groove.)
     Free,
 }
 
@@ -480,7 +481,8 @@ pub fn auto_effect(mood: u8, intensity: f32, last: Option<Effect>, roll: f32) ->
     let calm = intensity < 0.0;
     let choices: &[(Effect, f32)] = match mood {
         0 => &[(Breathe, 1.0)],
-        2 => &[(Riser, 1.0)],
+        // A build is lit like a groove: no climbing flicker. (The Riser is
+        // still there to lock by hand.)
         3 => &[(Pop, 1.0), (Split, 0.8), (Chase, 0.8), (Pulse, 0.6)],
         4 => &[(Breathe, 1.0), (Wave, 0.7)],
         _ if calm => &[(Wave, 1.0), (Pulse, 0.6), (Breathe, 0.4), (Split, 0.3)],
@@ -682,8 +684,7 @@ impl Engine {
             None => {
                 let new_section = show.mood != self.mood;
                 let new_phrase = phrase != self.phrase;
-                let wrong = cfg.effect.is_none() && ((show.mood == 2) != (self.effect == Effect::Riser));
-                (new_section || new_phrase || wrong).then(|| auto_effect(show.mood, show.intensity, Some(self.effect), self.rng.next()))
+                (new_section || new_phrase).then(|| auto_effect(show.mood, show.intensity, Some(self.effect), self.rng.next()))
             }
         };
         self.mood = show.mood;
@@ -715,7 +716,6 @@ impl Engine {
         // How bright the room is in this section.
         let section = match show.mood {
             0 => 0.15,
-            2 => 0.35 + 0.6 * show.tension.clamp(0.0, 1.0),
             3 => 1.0,
             4 => 0.4,
             _ => 0.65,
@@ -743,7 +743,6 @@ impl Engine {
             LightStrobe::Free => {
                 drop_began
                     || (show.mood == 3 && new_beat && beat.rem_euclid(if drive > 0.75 { 1 } else { 2 }) == 0)
-                    || (show.mood == 2 && show.tension > 0.85 - 0.25 * drive && new_beat)
             }
         };
         if want_hit {
@@ -1070,9 +1069,9 @@ mod tests {
             let at = w[1].0.rem_euclid(16.0);
             assert!(!(0.1..=15.9).contains(&at), "changed at beat {}", w[1].0);
         }
-        // A build is always the Riser, a breakdown calm.
+        // A build is lit like a groove, never the Riser; a breakdown calm.
         play(&mut e, &cfg, 2, 0.5, 300.0, 1.0, |_, _, _| {});
-        assert_eq!(e.effect(), Effect::Riser);
+        assert_ne!(e.effect(), Effect::Riser);
         play(&mut e, &cfg, 4, 0.0, 400.0, 1.0, |_, _, _| {});
         assert!(matches!(e.effect(), Effect::Breathe | Effect::Wave));
         // Locked: stays.
@@ -1122,6 +1121,28 @@ mod tests {
                 assert!(rises as f32 / 5.0 <= 3.05, "{effect:?}: {} swings a second", rises as f32 / 5.0);
             }
         }
+    }
+
+    #[test]
+    fn a_build_never_flashes_and_is_lit_like_a_groove() {
+        // Even at its height, with Auto and the most strobe there is.
+        let cfg = Lighting { strobe: LightStrobe::Free, drive: 1.0, ..two_spots() };
+        let (mut build, mut groove) = (Engine::default(), Engine::default());
+        let (mut build_levels, mut groove_levels) = (Vec::new(), Vec::new());
+        play(&mut build, &cfg, 2, 1.0, 0.0, 16.0, |t, o, eff| {
+            assert_ne!(eff, Effect::Riser);
+            assert!(o.iter().all(|l| l.flash == 0.0), "a flash in a build at {t}");
+            if t > 4.0 {
+                build_levels.extend(o.iter().map(|l| l.level));
+            }
+        });
+        play(&mut groove, &cfg, 1, 0.0, 0.0, 16.0, |t, o, _| {
+            if t > 4.0 {
+                groove_levels.extend(o.iter().map(|l| l.level));
+            }
+        });
+        let mean = |v: &[f32]| v.iter().sum::<f32>() / v.len() as f32;
+        assert!((mean(&build_levels) - mean(&groove_levels)).abs() < 0.12);
     }
 
     #[test]

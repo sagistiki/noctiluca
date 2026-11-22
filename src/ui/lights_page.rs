@@ -269,12 +269,12 @@ fn effects(ui: &mut Ui, width: f32, l: &mut Lighting, live: &Live) {
         widgets::icon_segmented(
             ui,
             &mut l.strobe,
-            &[(LightStrobe::Off, Icon::BoltOff, "Off"), (LightStrobe::Drops, Icon::Bolt, "On drops"), (LightStrobe::Free, Icon::Bolts, "Drops + builds")],
+            &[(LightStrobe::Off, Icon::BoltOff, "Off"), (LightStrobe::Drops, Icon::Bolt, "On drops"), (LightStrobe::Free, Icon::Bolts, "Drops, often")],
             seg_w,
             |s| match s {
                 LightStrobe::Off => "The lights never strobe".into(),
                 LightStrobe::Drops => "White hits on drops, at most three a second".into(),
-                LightStrobe::Free => "On drops and at the top of builds, at most three a second".into(),
+                LightStrobe::Free => "Through drops on every beat or two, at most three a second".into(),
             },
         );
     });
