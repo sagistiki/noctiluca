@@ -10,7 +10,7 @@ use super::style;
 use super::widgets;
 use super::{Live, PageState, UiAction};
 use crate::app_state::{Action, AppState};
-use crate::director::THEMES;
+use crate::director::{THEMES, ThemeLength};
 use crate::lights::{Effect, SmokeMode};
 use crate::settings::{OutputPattern, Settings, VARIETY_RANGE};
 use crate::timeline::Run;
@@ -264,6 +264,23 @@ fn inspector_panel(ui: &mut Ui, settings: &mut Settings, live: &Live, pages: &mu
 }
 
 fn look_tab(ui: &mut Ui, settings: &mut Settings, live: &Live) {
+    style::label(ui, "Theme length");
+    let options: Vec<(ThemeLength, Icon, &str)> = ThemeLength::ALL
+        .iter()
+        .map(|l| {
+            let icon = match l {
+                ThemeLength::Short => Icon::Bolt,
+                ThemeLength::Medium => Icon::Pulse,
+                ThemeLength::Long => Icon::Hold,
+            };
+            (*l, icon, l.name())
+        })
+        .collect();
+    let bpm = live.bpm;
+    widgets::icon_segmented(ui, &mut settings.theme_length, &options, ui.available_width(), |l| {
+        format!("A theme holds {} phrases, {} at this tempo, unless a drop or a new track ends it sooner", l.phrases(), l.about(bpm))
+    });
+    style::separator(ui);
     style::label(ui, "Themes in rotation");
     for (i, theme) in THEMES.iter().enumerate() {
         let mut on = settings.themes.get(i).copied().unwrap_or(true);

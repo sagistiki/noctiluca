@@ -210,6 +210,8 @@ pub struct Settings {
     pub themes: Vec<bool>,
     pub follow_vibe: bool,
     pub variety: f32,
+    /// How long the director holds a theme.
+    pub theme_length: crate::director::ThemeLength,
     pub quality: Quality,
     pub output: OutputSetup,
     /// The venue in use, by name (kept for settings from before venue files).
@@ -239,6 +241,7 @@ impl Default for Settings {
             themes: vec![true; THEMES.len()],
             follow_vibe: true,
             variety: 0.15,
+            theme_length: crate::director::ThemeLength::default(),
             quality: Quality::High,
             output: OutputSetup::default(),
             last_venue: None,
@@ -734,6 +737,17 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn theme_length_is_kept_and_old_files_start_on_medium() {
+        use crate::director::ThemeLength;
+        let old: Settings = serde_json::from_str("{}").unwrap();
+        assert_eq!(old.theme_length, ThemeLength::Medium);
+        let short = Settings { theme_length: ThemeLength::Short, ..Settings::default() };
+        let text = serde_json::to_string(&short).unwrap();
+        assert!(text.contains(r#""theme_length":"short""#));
+        assert_eq!(serde_json::from_str::<Settings>(&text).unwrap().theme_length, ThemeLength::Short);
+    }
 
     /// A fresh, empty folder for one test.
     fn scratch(name: &str) -> PathBuf {

@@ -29,7 +29,7 @@
 
 - **Listens.** A microphone (or any input) is enough. It tracks the tempo and the beat grid, hears every kick, and knows the section: groove, build, drop, breakdown.
 - **Reads the vibe.** Dark or bright, calm or intense, smooth or raw, measured over the last seconds, and the looks follow it.
-- **Directs itself.** A director picks themes, backgrounds, patterns, 3D objects, atmospheres and effects, changing on phrase boundaries, cross-fading on the beat. Or take it over by hand.
+- **Directs itself.** A director picks themes, backgrounds, patterns, 3D objects, atmospheres and effects, changing on phrase boundaries, cross-fading on the beat. Each theme holds for half a minute, a minute or two (Live › Look › Theme length), or until the drop. Or take it over by hand.
 - **Plays anywhere.** The Mac's screen, up to four outputs (projectors, displays), Android TV boxes over Wi-Fi, and DMX lights over USB.
 - **Maps the room.** Up to eight surfaces, each warped onto a wall, a pillar or a ceiling, with a calibration grid that is projected right onto them.
 - **Keeps people safe.** Never more than three flashes a second, whatever the music does.
@@ -110,7 +110,7 @@ The receiver lives in [`android/`](android/): plain Android, no libraries, hardw
 - **Lights** as cards with their live colour: RGB, dimmer + RGB, the common 7-channel RGB spot, RGBW, a smoke machine, or any custom channel list. A **channel finder** for lights whose manual is lost.
 - **Effects**: Pulse · Pop · Split · Wave · Chase · Breathe · Riser. **Auto** follows the section and the vibe and changes on phrases; or lock one.
 - **Drive**: one slider from *subtle* to *wild*: how bright, how deep the dips between hits, how fast things move, how snappy the fades, how vivid the colours.
-- **Strobe** hits on drops (and at the top of builds), through the same three-a-second limit. The lights' own strobe channels are never used.
+- **Strobe** hits on drops (or more often through them), through the same three-a-second limit; builds never flash, they are lit like a groove. The lights' own strobe channels are never used.
 - **Smoke**: by hand, or a burst on the drop, never more often than you set.
 
 ## `07` · Venues

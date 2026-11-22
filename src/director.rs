@@ -189,12 +189,14 @@ pub const PALETTES: [[[f32; 4]; 4]; 22] = [
         [1.0, 1.0, 1.0, 0.0],
         [0.50, 0.50, 0.50, 0.0],
     ],
-    // noctiluca: night sea, deep blue, glowing blue, foam (the app's own)
+    // noctiluca: the brand sea, night, deep, glowing blue, the pale of the
+    // shallows, sand-cream (fitted to it; it overshoots so red stays dark
+    // until the shallows). The sea background's bands run along it.
     [
-        [0.32, 0.49, 0.75, 0.0],
-        [0.42, 0.42, 0.36, 0.0],
+        [0.575, 0.50, 0.375, 0.0],
+        [0.70, 0.475, 0.65, 0.0],
         [1.0, 1.0, 1.0, 0.0],
-        [0.50, 0.50, 0.50, 0.0],
+        [0.40, 0.49, 0.64, 0.0],
     ],
     // vaporwave: violet, hot pink, cyan
     [
@@ -1304,8 +1306,50 @@ const NEW_TRACK_FADE_BEATS: f32 = 8.0;
 /// A theme gets at least this many phrases before a new track may end it.
 const MIN_THEME_PHRASES: u32 = 4;
 
-/// A theme lasts this many phrases (two minutes at 128 BPM), or until a drop.
-const THEME_PHRASES: u32 = 16;
+/// How long a theme lasts, unless a drop or a new track ends it sooner.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ThemeLength {
+    /// Four phrases: about half a minute at 128 BPM.
+    Short,
+    /// Eight phrases: about a minute.
+    #[default]
+    Medium,
+    /// Sixteen phrases: about two minutes.
+    Long,
+}
+
+impl ThemeLength {
+    pub const ALL: [ThemeLength; 3] = [ThemeLength::Short, ThemeLength::Medium, ThemeLength::Long];
+
+    /// The phrases a theme lasts.
+    pub fn phrases(self) -> u32 {
+        match self {
+            ThemeLength::Short => 4,
+            ThemeLength::Medium => 8,
+            ThemeLength::Long => 16,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            ThemeLength::Short => "Short",
+            ThemeLength::Medium => "Medium",
+            ThemeLength::Long => "Long",
+        }
+    }
+
+    /// About how long that is at `bpm`, for the tooltip ("about 1 min").
+    pub fn about(self, bpm: f32) -> String {
+        let bpm = if bpm.is_finite() && bpm > 40.0 { bpm } else { 128.0 };
+        let secs = (self.phrases() as f32 * PHRASE_BEATS as f32 * 60.0 / bpm).round() as u32;
+        if secs < 60 {
+            format!("about {secs} s")
+        } else {
+            format!("about {}:{:02}", secs / 60, secs % 60)
+        }
+    }
+}
 
 /// A build-up closes the picture in over this long...
 const TENSION_RISE_SECS: f32 = 8.0;
@@ -1323,6 +1367,8 @@ pub struct DirectorOptions {
     pub follow_vibe: bool,
     /// How much a thing far from the vibe still counts (0.05..0.5).
     pub variety: f32,
+    /// How long a theme lasts.
+    pub theme_length: ThemeLength,
 }
 
 impl Default for DirectorOptions {
@@ -1331,6 +1377,9 @@ impl Default for DirectorOptions {
             themes: vec![true; THEMES.len()],
             follow_vibe: true,
             variety: VIBE_FLOOR,
+            // The director's own pace, which its tests are written for; the
+            // app starts on Medium (see Settings).
+            theme_length: ThemeLength::Long,
         }
     }
 }
@@ -1528,7 +1577,7 @@ impl Director {
                 self.since_timer_change = 0.0;
                 if !self.locked {
                     self.phrases_in_theme += 2; // a timer change is about two phrases long
-                    let look = if self.phrases_in_theme >= THEME_PHRASES {
+                    let look = if self.phrases_in_theme >= self.options.theme_length.phrases() {
                         self.theme_change()
                     } else {
                         self.one_new(true, !lows_gone)
@@ -1545,7 +1594,7 @@ impl Director {
                     self.theme_change()
                 } else if !phrase.is_multiple_of(2) {
                     self.one_new(false, !lows_gone)
-                } else if self.phrases_in_theme >= THEME_PHRASES {
+                } else if self.phrases_in_theme >= self.options.theme_length.phrases() {
                     self.theme_change()
                 } else {
                     let t = &THEMES[self.theme];
@@ -2893,6 +2942,56 @@ mod tests {
             }
         }
         assert!(unlucky.len() <= 1, "{unlucky:?}");
+    }
+
+    #[test]
+    fn the_theme_length_sets_how_long_a_theme_holds() {
+        // 16 minutes at 128 BPM: about 8 themes when long, 16 at medium,
+        // 32 when short, and none comes back while others wait.
+        for (length, expect) in [
+            (ThemeLength::Long, 7..=8),
+            (ThemeLength::Medium, 15..=16),
+            (ThemeLength::Short, 31..=32),
+        ] {
+            let mut d = Director::new(19);
+            d.set_options(DirectorOptions {
+                theme_length: length,
+                ..DirectorOptions::default()
+            });
+            let frames = play(&mut d, 0, 2048);
+            let switches = frames
+                .windows(2)
+                .filter(|w| w[0].1.theme != w[1].1.theme)
+                .count();
+            assert!(expect.contains(&switches), "{length:?}: {switches} theme changes");
+            // Colour and background still belong to the theme on screen.
+            for (_, o) in frames.iter().filter(|(_, o)| o.mix >= 1.0) {
+                let t = &THEMES[o.theme];
+                assert!(t.palettes.contains(&o.to.palette) && t.backgrounds.contains(&o.to.bg));
+            }
+        }
+        assert_eq!(ThemeLength::Medium.about(128.0), "about 1:00");
+        assert_eq!(ThemeLength::Short.about(128.0), "about 30 s");
+        assert_eq!(ThemeLength::Long.about(f32::NAN), "about 2:00");
+    }
+
+    #[test]
+    fn the_noctiluca_palette_is_the_brand_sea() {
+        use std::f32::consts::TAU;
+        // The sea's bands run along the palette from t = 0.5 (light) to 0
+        // (night); under Noctiluca that must be the brand: sand-cream,
+        // glowing blue, night (see docs/superpowers/specs/2026-11-22-sea-bands-design.md).
+        let p = PALETTES[12];
+        let at = |t: f32| -> [f32; 3] {
+            std::array::from_fn(|c| (p[0][c] + p[1][c] * (TAU * (p[2][c] * t + p[3][c])).cos()).clamp(0.0, 1.0))
+        };
+        for (t, want) in [(0.5, [0.97, 0.94, 0.87]), (0.25, [0.16, 0.46, 0.94]), (0.0, [0.004, 0.016, 0.05])] {
+            let got = at(t);
+            assert!(
+                got.iter().zip(want).all(|(g, w)| (g - w).abs() < 0.1),
+                "t {t}: {got:?}, want {want:?}"
+            );
+        }
     }
 
     #[test]

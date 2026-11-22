@@ -557,6 +557,7 @@ fn director_options(s: &Settings) -> DirectorOptions {
         themes: s.themes.clone(),
         follow_vibe: s.follow_vibe,
         variety: s.variety,
+        theme_length: s.theme_length,
     }
 }
 
@@ -982,7 +983,11 @@ impl App {
         {
             d.set_port(s.lighting.port.clone());
         }
-        if s.themes != old.themes || s.follow_vibe != old.follow_vibe || s.variety != old.variety {
+        if s.themes != old.themes
+            || s.follow_vibe != old.follow_vibe
+            || s.variety != old.variety
+            || s.theme_length != old.theme_length
+        {
             self.director.set_options(director_options(s));
         }
         self.saver.changed(&self.settings, Instant::now());
