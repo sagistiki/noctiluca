@@ -1,6 +1,6 @@
 [package]
 name = "noctiluca"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "A live club visualizer for macOS: screens, projectors, TV boxes and DMX lights, in sync with the music"
 license = "MIT"
