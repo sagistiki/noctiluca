@@ -20,7 +20,8 @@ pub struct Uniforms {
     pub post: [[f32; 4]; 3],
     pub spectrum: [[f32; 4]; 16],
     pub wave: [[f32; 4]; 64],
-    /// [label opacity, label length in characters, treatment strength, unused]
+    /// [label opacity, label length in characters, treatment strength,
+    /// transition (0 fade, 1 ink, 2 zoom through)]
     /// (the treatment itself, VHS, thermal or film, is post[2][1])
     pub overlay: [f32; 4],
     /// A short line of text shown on screen (see `encode_label`).
@@ -197,9 +198,9 @@ impl Uniforms {
         let (text, overlay) = match frame.label {
             Some((label, opacity)) => {
                 let (text, len) = encode_label(label);
-                (text, [opacity.clamp(0.0, 1.0), len as f32, treatment, 0.0])
+                (text, [opacity.clamp(0.0, 1.0), len as f32, treatment, frame.show.transition.code()])
             }
-            None => ([[0.0; 4]; 8], [0.0, 0.0, treatment, 0.0]),
+            None => ([[0.0; 4]; 8], [0.0, 0.0, treatment, frame.show.transition.code()]),
         };
         Self {
             res_time: [
@@ -302,6 +303,7 @@ mod tests {
                 theme: 0,
                 complement_from: from,
                 complement_to: to,
+                transition: crate::director::Transition::Fade,
             },
             strobe: 0.0,
             label: None,

@@ -56,6 +56,21 @@ const CROSS_FADE: wgpu::BlendState = wgpu::BlendState {
         operation: wgpu::BlendOperation::Add,
     },
 };
+/// The scene: the outgoing look drawn solid, the incoming one over it by the
+/// alpha its shader gives (the fade, or an ink blot or opening circle for
+/// other transitions). The picture stays opaque.
+const SCENE_BLEND: wgpu::BlendState = wgpu::BlendState {
+    color: wgpu::BlendComponent {
+        src_factor: wgpu::BlendFactor::SrcAlpha,
+        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+        operation: wgpu::BlendOperation::Add,
+    },
+    alpha: wgpu::BlendComponent {
+        src_factor: wgpu::BlendFactor::One,
+        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+        operation: wgpu::BlendOperation::Add,
+    },
+};
 /// The scene pass is the expensive one (ray marching, layered noise), and
 /// what it draws is soft: it is blurred, echoed and glowed afterwards. So it
 /// is drawn at no more than 1080 lines and scaled up by the effects pass,
@@ -658,9 +673,12 @@ impl Renderer {
         let v = &mut self.views[id];
         let (t, uniforms) = (&v.targets, &v.uniform_bind);
         let now = v.flip;
-        let scene = |look: Look| {
+        // The draw's instance number: which look, plus a flag for the
+        // outgoing look while another comes in (LEAVING) or the incoming one
+        // (ARRIVING); see scene.wgsl.
+        let scene = |look: Look, flag: u32| {
             let look = look.wrapped();
-            let k = (look.bg * shaders::SCENE_SLOTS + look.pattern) as u32;
+            let k = (look.bg * shaders::SCENE_SLOTS + look.pattern) as u32 + flag;
             k..k + 1
         };
 
@@ -671,18 +689,11 @@ impl Renderer {
             let mut rp = begin_pass(encoder, &t.scene.view);
             rp.set_bind_group(0, uniforms, &[]);
             rp.set_pipeline(&p.scene);
-            rp.set_blend_constant(wgpu::Color::WHITE);
-            rp.draw(0..3, scene(show.from));
             let same_scene = (show.from.bg, show.from.pattern) == (show.to.bg, show.to.pattern);
-            if !same_scene && show.mix > 0.0 {
-                let m = show.mix as f64;
-                rp.set_blend_constant(wgpu::Color {
-                    r: m,
-                    g: m,
-                    b: m,
-                    a: m,
-                });
-                rp.draw(0..3, scene(show.to));
+            let arriving = !same_scene && show.mix > 0.0;
+            rp.draw(0..3, scene(show.from, if arriving { shaders::SCENE_LEAVING } else { 0 }));
+            if arriving {
+                rp.draw(0..3, scene(show.to, shaders::SCENE_ARRIVING));
             }
         }
         let on_screen = Self::objects_on_screen(show);
@@ -1056,7 +1067,7 @@ impl Gpu {
     fn pipelines(&self, dir: &Path, screen: wgpu::TextureFormat) -> Result<Pipelines, String> {
         let text = |r: Result<shaders::Assembled>| r.map_err(|e| format!("{e:#}"));
         let scene_source = text(shaders::assemble_scene(dir, &BACKGROUNDS, &PATTERNS))?;
-        let scene = self.pipeline("scene", &scene_source, "fs_main", HDR_FORMAT, Reads::Nothing, Some(CROSS_FADE))?;
+        let scene = self.pipeline("scene", &scene_source, "fs_main", HDR_FORMAT, Reads::Nothing, Some(SCENE_BLEND))?;
         let post = text(shaders::assemble_pass(dir, "post"))?;
         let glow = text(shaders::assemble_pass(dir, "glow"))?;
         let present = text(shaders::assemble_pass(dir, "present"))?;

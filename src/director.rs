@@ -414,6 +414,30 @@ impl Bag {
 }
 
 /// What to draw this frame: usually one look, or two while cross-fading.
+/// How one look gives way to the next.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Transition {
+    /// The new look fades in over the old.
+    #[default]
+    Fade,
+    /// The new look spreads in like ink in water.
+    Ink,
+    /// The camera flies through the old look into the new one, which opens
+    /// from the middle (on drops).
+    Zoom,
+}
+
+impl Transition {
+    /// The number scene.wgsl reads.
+    pub fn code(self) -> f32 {
+        match self {
+            Transition::Fade => 0.0,
+            Transition::Ink => 1.0,
+            Transition::Zoom => 2.0,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DirectorOut {
     pub from: Look,
@@ -431,6 +455,8 @@ pub struct DirectorOut {
     /// fading with the same `mix`.
     pub complement_from: Look,
     pub complement_to: Look,
+    /// How `from` gives way to `to`.
+    pub transition: Transition,
 }
 
 /// Objects whose compositions are walls: a Complement surface shows the
@@ -979,6 +1005,8 @@ pub struct Director {
     /// How long the vibe has been far from `theme_vibe`.
     moved_for: f32,
     options: DirectorOptions,
+    /// How the current change goes.
+    transition: Transition,
 }
 
 impl Director {
@@ -1028,6 +1056,7 @@ impl Director {
             theme_vibe: Vibe::default(),
             moved_for: 0.0,
             options: DirectorOptions::default(),
+            transition: Transition::Fade,
         }
     }
 
@@ -1189,6 +1218,7 @@ impl Director {
             theme: self.theme,
             complement_from: self.complement_from,
             complement_to: self.complement_to,
+            transition: self.transition,
         }
     }
 
@@ -1342,6 +1372,16 @@ impl Director {
         self.complement_to = self.complement_of(look);
         self.progress = 0.0;
         self.fade_secs = fade_secs.max(0.05);
+        // How it gives way: on a drop, often by flying through; otherwise
+        // now and then like ink, mostly a plain fade.
+        let roll = self.rng.unit();
+        self.transition = if fade_secs <= DROP_FADE_SECS + 1e-3 {
+            if roll < 0.5 { Transition::Zoom } else { Transition::Fade }
+        } else if roll < 0.3 {
+            Transition::Ink
+        } else {
+            Transition::Fade
+        };
     }
 
     /// The look for Complement surfaces that goes with `main`: the same

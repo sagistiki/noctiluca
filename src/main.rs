@@ -192,6 +192,15 @@ struct Args {
     #[arg(long, hide = true)]
     snapshot_mapping_tab: Option<String>,
 
+    /// Snapshots only: freeze the picture part way through a change to
+    /// another background and pattern ("fade", "ink", "zoom").
+    #[arg(long, hide = true)]
+    snapshot_transition: Option<String>,
+
+    /// Snapshots only: how far the change has come, 0..1.
+    #[arg(long, hide = true, default_value_t = 0.5)]
+    snapshot_mix: f32,
+
     /// With --snapshot: how many seconds to run before saving.
     #[arg(long, default_value_t = 3.0)]
     at: f32,
@@ -214,6 +223,9 @@ const FRAME_INTERVAL: Duration = Duration::from_micros(15_500);
 const HIDDEN_FRAME_INTERVAL: Duration = Duration::from_millis(200);
 /// The menu's live preview of the show, in pixels.
 const PREVIEW_SIZE: (u32, u32) = (960, 540);
+/// How fast the visuals move through a breakdown, and how quickly they get there.
+const BREAKDOWN_PACE: f32 = 0.4;
+const PACE_EASE_SECS: f32 = 1.2;
 /// Input devices, displays and venues are looked up this often while the menu shows.
 const REFRESH_LISTS: Duration = Duration::from_secs(4);
 /// How long a menu message stays.
@@ -341,6 +353,9 @@ struct App {
     audio: AudioIn,
     analyzer: Analyzer,
     flow: Flow,
+    /// How fast the visuals' clocks run: slower through a breakdown, as
+    /// if the room held its breath (1 normal).
+    pace: f32,
     /// Reused every frame so draining the ring does not allocate.
     scratch: Vec<f32>,
     start: Instant,
@@ -626,6 +641,7 @@ impl App {
             monitor: None,
             args,
             flow,
+            pace: 1.0,
             scratch: vec![0.0; 4096],
             start: now,
             last_frame: now,
@@ -778,7 +794,10 @@ impl App {
         }
         // A drop, or the first frames of a cross-fade: the picture is changing anyway.
         let covered = features.drop || (show.from != show.to && show.mix < 0.05);
-        self.flow.advance(&features, dt, covered);
+        // Slow motion through a breakdown, eased in and out.
+        let target = if features.mood == Mood::Breakdown { BREAKDOWN_PACE } else { 1.0 };
+        self.pace += (target - self.pace) * (1.0 - (-dt / PACE_EASE_SECS).exp());
+        self.flow.advance(&features, dt * self.pace, covered);
         if self.announced != Some(show.to) {
             self.announced = Some(show.to);
             let l = show.to;
@@ -2434,9 +2453,24 @@ impl ApplicationHandler for App {
         if !self.args.bench {
             std::thread::sleep(Duration::from_millis(16));
         }
-        let Some((uniforms, show)) = self.tick() else {
+        let Some((mut uniforms, mut show)) = self.tick() else {
             return;
         };
+        if let Some(kind) = &self.args.snapshot_transition {
+            use noctiluca::director::Transition;
+            let transition = match kind.as_str() {
+                "ink" => Transition::Ink,
+                "zoom" => Transition::Zoom,
+                _ => Transition::Fade,
+            };
+            let mut to = show.to;
+            to.bg = (to.bg + 7) % BACKGROUNDS.len();
+            to.pattern = (to.pattern + 5) % PATTERNS.len();
+            let mix = self.args.snapshot_mix.clamp(0.0, 1.0);
+            show = DirectorOut { from: show.to, to, mix, transition, ..show };
+            uniforms.state[1] = mix;
+            uniforms.overlay[3] = transition.code();
+        }
         let look = show.to;
         let Some(renderer) = &mut self.renderer else {
             return;

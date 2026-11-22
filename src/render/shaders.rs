@@ -105,6 +105,10 @@ pub fn assemble_scene(dir: &Path, backgrounds: &[&str], patterns: &[&str]) -> Re
 
 /// How many patterns a background has room for in a draw's instance number.
 pub const SCENE_SLOTS: usize = 64;
+/// Added to the instance number of the outgoing look while another comes in.
+pub const SCENE_LEAVING: u32 = 4096;
+/// Added to the instance number of the incoming look.
+pub const SCENE_ARRIVING: u32 = 2048;
 
 /// The functions that call background K and pattern K by number.
 fn dispatch(backgrounds: usize, patterns: usize) -> String {
