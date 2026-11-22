@@ -185,7 +185,7 @@ src/
 shaders/         WGSL, reloaded live while you edit them
 site/            the website (GitHub Pages, published by .github/workflows/pages.yml)
 assets/models/   the 3D objects (glTF), made in Blender (blender/build_models.py)
-android/         the TV box receiver
+android/         the Android TV screen receiver
 docs/brand/      the icon and banners as SVG/HTML, rendered by render.sh
 ```
 

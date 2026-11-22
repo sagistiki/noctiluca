@@ -105,7 +105,7 @@
   // straight at the file. If it does not answer, they still work.
   const kinds = {
     macos: { match: (n) => /macos.*\.zip$/i.test(n), label: (a) => `Apple silicon · ${mb(a.size)}` },
-    apk: { match: (n) => /\.apk$/i.test(n), label: (a) => `Android TV · ${mb(a.size)}` },
+    apk: { match: (n) => /\.apk$/i.test(n), label: (a) => `.apk · ${mb(a.size)}` },
   };
   const mb = (bytes) => `${(bytes / 1048576).toFixed(1)} MB`;
   const date = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
