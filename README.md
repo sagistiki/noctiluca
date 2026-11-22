@@ -49,7 +49,7 @@
   </tr>
 </table>
 
-Nineteen themes, from clean to luxurious to heavy, each a world the director builds looks from: Red room · White corridor · Terminal · Ultraviolet · Amber · Rainbow · Gold room · Marble hall · Noctiluca · Velvet · Liquid chrome · Bauhaus · Acid warehouse · Infrared · Deep space · Arctic · Jungle night · Holographic · Cathedral.
+Twenty-two themes, from clean to luxurious to heavy, each a world the director builds looks from: Red room · White corridor · Terminal · Ultraviolet · Amber · Rainbow · Gold room · Marble hall · Noctiluca · Velvet · Liquid chrome · Bauhaus · Acid warehouse · Infrared · Deep space · Arctic · Jungle night · Holographic · Cathedral · Heat · Riso print · Golden hour.
 
 | | |
 |---|---|
@@ -59,6 +59,12 @@ Nineteen themes, from clean to luxurious to heavy, each a world the director bui
 | **Atmospheres** (13) | storm with lightning · smoke · fire · moving-head beams · aurora · snow · rain · bubbles · fireflies · god rays · caustics · lens flares · shooting stars |
 | **Effects** (19) | trails · zoom · kaleido · drift · CRT · prism · floor · VHS · thermal camera · film · chroma · glow · datamosh · feedback · riso · slit scan · heat haze · iridescent · long exposure |
 | **Palettes** (22) | neon · acid · fire · ice · ultraviolet · gold · rose gold · noctiluca · vaporwave · sunset · forest · blood orange · pastel · cyber · bauhaus · infrared · aurora, and five of one colour on black |
+
+**The director has taste.** It was taught by a blind test: 140 looks, half from the themes and half thrown together at random, rated without names. What came out is built into how it chooses:
+
+- **Restraint.** The busier a look, the lower it scored: about 2.5 out of 3 with nothing busy in it, under 1 when everything was. Each background, pattern, palette, effect, object and atmosphere has a busyness, and the director keeps the whole look clear. Busy looks went from one in seven to about one in thirteen.
+- **What was liked.** One-colour palettes, clean structural patterns (frames, spirals, kaleidoscopes), and the effects that pull colours together (thermal, riso, glow, CRT) come up more often. Busy glitches, chequers and cell patterns come up less, but nothing disappears: the longer something has waited, the stronger its claim.
+- **New themes from the best of it.** Heat (the thermal camera), Riso print and Golden hour were built from loved looks no theme had made; Noctiluca, Velvet and Bauhaus were rebuilt around what scored.
 
 One look gives way to the next with a fade, an ink blot spreading, or a flight through the old look on the drop. On a build the camera pushes in, on the drop everything hits at once, and through a breakdown everything slows down.
 

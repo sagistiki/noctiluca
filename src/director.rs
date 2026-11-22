@@ -5,12 +5,32 @@ use crate::analysis::{Features, Mood, Vibe};
 
 pub const BACKGROUNDS: [&str; 20] = [
     "tunnel", "grid", "liquid", "shapes", "void", "marble", "sea", "nebula", "mirrors", "leds",
-    "concrete", "mercury", "contours", "plasma", "voronoi", "fractal", "ink", "lasers", "sky", "silk",
+    "concrete", "mercury", "contours", "plasma", "voronoi", "fractal", "ink", "lasers", "sky",
+    "silk",
 ];
 pub const PATTERNS: [&str; 22] = [
-    "rings", "scope", "kaleido", "bars", "stripes", "frames", "radar", "spiral", "halftone",
-    "lissajous", "moire", "ribbon", "truchet", "barcode", "flower", "checker", "strings", "mandala",
-    "ascii", "stringart", "pixelsort", "orbits",
+    "rings",
+    "scope",
+    "kaleido",
+    "bars",
+    "stripes",
+    "frames",
+    "radar",
+    "spiral",
+    "halftone",
+    "lissajous",
+    "moire",
+    "ribbon",
+    "truchet",
+    "barcode",
+    "flower",
+    "checker",
+    "strings",
+    "mandala",
+    "ascii",
+    "stringart",
+    "pixelsort",
+    "orbits",
 ];
 pub const PALETTE_NAMES: [&str; 22] = [
     "neon",
@@ -68,13 +88,42 @@ pub const MATERIALS: [&str; 2] = ["chrome", "glass"];
 /// The atmosphere over everything: weather, fire, light. "storm" is clouds
 /// with lightning. "none" is no atmosphere.
 pub const ATMOSPHERES: [&str; 14] = [
-    "none", "storm", "smoke", "fire", "beams", "aurora", "snow", "rain", "bubbles", "fireflies",
-    "rays", "caustics", "flares", "meteors",
+    "none",
+    "storm",
+    "smoke",
+    "fire",
+    "beams",
+    "aurora",
+    "snow",
+    "rain",
+    "bubbles",
+    "fireflies",
+    "rays",
+    "caustics",
+    "flares",
+    "meteors",
 ];
 pub const POST_NAMES: [&str; 20] = [
-    "clean", "trails", "zoom", "kaleido", "drift", "crt", "prism", "floor", "vhs", "thermal",
-    "film", "chroma", "glow", "datamosh", "feedback", "riso", "slit scan", "heat haze",
-    "iridescent", "long exposure",
+    "clean",
+    "trails",
+    "zoom",
+    "kaleido",
+    "drift",
+    "crt",
+    "prism",
+    "floor",
+    "vhs",
+    "thermal",
+    "film",
+    "chroma",
+    "glow",
+    "datamosh",
+    "feedback",
+    "riso",
+    "slit scan",
+    "heat haze",
+    "iridescent",
+    "long exposure",
 ];
 
 /// Cosine palettes (a, b, c, d): colour(t) = a + b * cos(2π(c·t + d)).
@@ -127,29 +176,89 @@ pub const PALETTES: [[[f32; 4]; 4]; 22] = [
     // many-coloured ones (vaporwave, pastel, cyber, bauhaus, aurora) run
     // some channels twice as fast to reach three hues.
     // gold: black, bronze, gold, pale gold
-    [[0.50, 0.42, 0.23, 0.0], [0.50, 0.44, 0.27, 0.0], [1.0, 1.0, 1.0, 0.0], [0.50, 0.50, 0.50, 0.0]],
+    [
+        [0.50, 0.42, 0.23, 0.0],
+        [0.50, 0.44, 0.27, 0.0],
+        [1.0, 1.0, 1.0, 0.0],
+        [0.50, 0.50, 0.50, 0.0],
+    ],
     // rose gold: dark plum, copper rose, blush
-    [[0.66, 0.48, 0.45, 0.0], [0.39, 0.39, 0.36, 0.0], [1.0, 1.0, 1.0, 0.0], [0.50, 0.50, 0.50, 0.0]],
+    [
+        [0.66, 0.48, 0.45, 0.0],
+        [0.39, 0.39, 0.36, 0.0],
+        [1.0, 1.0, 1.0, 0.0],
+        [0.50, 0.50, 0.50, 0.0],
+    ],
     // noctiluca: night sea, deep blue, glowing blue, foam (the app's own)
-    [[0.32, 0.49, 0.75, 0.0], [0.42, 0.42, 0.36, 0.0], [1.0, 1.0, 1.0, 0.0], [0.50, 0.50, 0.50, 0.0]],
+    [
+        [0.32, 0.49, 0.75, 0.0],
+        [0.42, 0.42, 0.36, 0.0],
+        [1.0, 1.0, 1.0, 0.0],
+        [0.50, 0.50, 0.50, 0.0],
+    ],
     // vaporwave: violet, hot pink, cyan
-    [[0.08, 0.39, 1.06, 0.0], [1.00, 0.45, 0.93, 0.0], [2.0, 1.0, 1.0, 0.0], [0.09, 0.28, 0.22, 0.0]],
+    [
+        [0.08, 0.39, 1.06, 0.0],
+        [1.00, 0.45, 0.93, 0.0],
+        [2.0, 1.0, 1.0, 0.0],
+        [0.09, 0.28, 0.22, 0.0],
+    ],
     // sunset: plum, rose, coral, peach
-    [[0.76, 0.37, 0.38, 0.0], [0.38, 0.32, 0.10, 0.0], [1.0, 1.0, 1.0, 0.0], [0.50, 0.50, 0.50, 0.0]],
+    [
+        [0.76, 0.37, 0.38, 0.0],
+        [0.38, 0.32, 0.10, 0.0],
+        [1.0, 1.0, 1.0, 0.0],
+        [0.50, 0.50, 0.50, 0.0],
+    ],
     // forest: deep greens to moss
-    [[0.22, 0.42, 0.26, 0.0], [0.29, 0.38, 0.25, 0.0], [1.0, 1.0, 1.0, 0.0], [0.50, 0.50, 0.50, 0.0]],
+    [
+        [0.22, 0.42, 0.26, 0.0],
+        [0.29, 0.38, 0.25, 0.0],
+        [1.0, 1.0, 1.0, 0.0],
+        [0.50, 0.50, 0.50, 0.0],
+    ],
     // blood orange: dark red, burning orange
-    [[0.63, 0.20, 0.09, 0.0], [0.44, 0.26, 0.09, 0.0], [1.0, 1.0, 1.0, 0.0], [0.50, 0.50, 0.50, 0.0]],
+    [
+        [0.63, 0.20, 0.09, 0.0],
+        [0.44, 0.26, 0.09, 0.0],
+        [1.0, 1.0, 1.0, 0.0],
+        [0.50, 0.50, 0.50, 0.0],
+    ],
     // pastel: iridescent sky, lilac, blush, butter
-    [[0.92, 0.88, 1.12, 0.0], [0.15, 0.10, 0.38, 0.0], [1.0, 2.0, 1.0, 0.0], [0.51, 0.03, 0.02, 0.0]],
+    [
+        [0.92, 0.88, 1.12, 0.0],
+        [0.15, 0.10, 0.38, 0.0],
+        [1.0, 2.0, 1.0, 0.0],
+        [0.51, 0.03, 0.02, 0.0],
+    ],
     // cyber: cyan, hot pink, yellow, black
-    [[1.36, 1.03, 0.33, 0.0], [4.55, 0.98, 0.79, 0.0], [1.0, 2.0, 1.0, 0.0], [0.60, 0.10, 1.00, 0.0]],
+    [
+        [1.36, 1.03, 0.33, 0.0],
+        [4.55, 0.98, 0.79, 0.0],
+        [1.0, 2.0, 1.0, 0.0],
+        [0.60, 0.10, 1.00, 0.0],
+    ],
     // bauhaus: red, yellow, blue, black
-    [[0.72, 0.40, 0.34, 0.0], [0.65, 0.37, 0.26, 0.0], [2.0, 2.0, 1.0, 0.0], [0.55, 0.40, 0.03, 0.0]],
+    [
+        [0.72, 0.40, 0.34, 0.0],
+        [0.65, 0.37, 0.26, 0.0],
+        [2.0, 2.0, 1.0, 0.0],
+        [0.55, 0.40, 0.03, 0.0],
+    ],
     // infrared: violet black, magenta, red, yellow
-    [[0.71, 0.24, 0.27, 0.0], [0.44, 0.36, 0.01, 0.0], [1.0, 1.0, 1.0, 0.0], [0.50, 0.50, 0.00, 0.0]],
+    [
+        [0.71, 0.24, 0.27, 0.0],
+        [0.44, 0.36, 0.01, 0.0],
+        [1.0, 1.0, 1.0, 0.0],
+        [0.50, 0.50, 0.00, 0.0],
+    ],
     // aurora: night, deep green, glowing green, violet
-    [[0.33, 0.49, 0.65, 0.0], [0.35, 0.45, 0.57, 0.0], [1.0, 2.0, 1.0, 0.0], [0.08, 0.63, 0.04, 0.0]],
+    [
+        [0.33, 0.49, 0.65, 0.0],
+        [0.35, 0.45, 0.57, 0.0],
+        [1.0, 2.0, 1.0, 0.0],
+        [0.08, 0.63, 0.04, 0.0],
+    ],
 ];
 
 /// A palette that is one colour at varying brightness: as t goes round,
@@ -411,10 +520,14 @@ impl Bag {
             .filter(|v| !held.contains(v))
             .collect();
         self.dealt += 1;
-        // A wait as long as two rounds of all the choices doubles a claim.
+        // A wait as long as two rounds of all the choices doubles a claim
+        // and a bit, four rounds make it four times as strong, and on it
+        // grows with the square of the wait: the least liked values come
+        // seldom, but a long wait always ends.
         let (dealt, last, waits) = (self.dealt, &self.last, 2.0 * options.len() as f32);
         let pick = rng.weighted(&open, |v| {
-            weight(v) * (1.0 + (dealt - last[v]) as f32 / waits)
+            let w = (dealt - last[v]) as f32 / waits;
+            weight(v) * (1.0 + w + 0.25 * w * w)
         });
         self.last[pick] = self.dealt;
         self.recent.push(pick);
@@ -509,7 +622,7 @@ pub struct Theme {
 //                9 speakers  10 crystal  11 planet  12 corridor  13 bust  14 diamond  15 vinyl
 //                16 jellyfish  17 rose  18 blob  19 pyramid  20 moon  21 dna  22 butterfly
 //                23 cubes  24 astronaut
-pub const THEMES: [Theme; 19] = [
+pub const THEMES: [Theme; 22] = [
     Theme {
         name: "red room",
         palettes: &[5],
@@ -559,9 +672,13 @@ pub const THEMES: [Theme; 19] = [
         name: "rainbow",
         palettes: &[0, 1, 2, 3, 4, 13, 14, 18, 21],
         backgrounds: &[0, 1, 2, 3, 7, 8, 9, 13, 14, 15, 17],
-        patterns: &[0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+        patterns: &[
+            0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+        ],
         posts: &[1, 2, 3, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18],
-        objects: &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+        objects: &[
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+        ],
         atmos: &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
     },
     // The luxe, clean and heavy themes (2026-11-22).
@@ -586,18 +703,18 @@ pub const THEMES: [Theme; 19] = [
     Theme {
         name: "noctiluca",
         palettes: &[12],
-        backgrounds: &[6, 16, 7, 2],
-        patterns: &[21, 9, 0, 11, 16],
-        posts: &[12, 1, 19, 17],
-        objects: &[11, 10, 4, 1, 16, 20],
-        atmos: &[0, 2, 11, 8, 9, 10],
+        backgrounds: &[6, 16, 2, 4],
+        patterns: &[16, 7, 9, 21, 0],
+        posts: &[12, 0, 19, 7],
+        objects: &[16, 20, 10, 22, 5, 21],
+        atmos: &[0, 8, 10, 13, 9, 11],
     },
     Theme {
         name: "velvet",
         palettes: &[5, 16, 11],
         backgrounds: &[19, 16, 4, 5],
-        patterns: &[11, 4, 5, 17],
-        posts: &[12, 1, 10, 7],
+        patterns: &[4, 5, 7, 11],
+        posts: &[12, 7, 10, 0],
         objects: &[1, 2, 7, 8, 17, 15],
         atmos: &[0, 2, 3, 4, 7, 10],
     },
@@ -613,9 +730,9 @@ pub const THEMES: [Theme; 19] = [
     Theme {
         name: "bauhaus",
         palettes: &[19],
-        backgrounds: &[4, 14, 12],
-        patterns: &[12, 15, 13, 0, 4],
-        posts: &[0, 15, 11],
+        backgrounds: &[4, 10, 3, 12],
+        patterns: &[5, 13, 4, 0, 12, 15],
+        posts: &[0, 15, 5],
         objects: &[7, 3, 5, 19, 23],
         atmos: &[0, 4],
     },
@@ -682,6 +799,37 @@ pub const THEMES: [Theme; 19] = [
         objects: &[7, 1, 3, 4, 12, 13, 19, 17],
         atmos: &[0, 4, 2, 10],
     },
+    // Three from the blind look test (2026-11-22), built around the looks
+    // that scored best though no theme had made them: the thermal camera,
+    // riso ink, and gold light on a calm sky.
+    Theme {
+        name: "heat",
+        palettes: &[15, 7, 8, 20],
+        backgrounds: &[17, 3, 12, 13, 4],
+        patterns: &[7, 5, 11, 10, 9],
+        // Thermal only: it is the theme.
+        posts: &[9],
+        objects: &[12, 6, 15, 2, 5, 18],
+        atmos: &[0, 13, 1, 12],
+    },
+    Theme {
+        name: "riso print",
+        palettes: &[2, 16, 5, 9],
+        backgrounds: &[6, 8, 3, 4, 10],
+        patterns: &[1, 2, 5, 7, 13],
+        posts: &[15, 10],
+        objects: &[20, 9, 15, 6, 13],
+        atmos: &[0, 13, 7, 1],
+    },
+    Theme {
+        name: "golden hour",
+        palettes: &[10, 9, 14],
+        backgrounds: &[18, 19, 6, 5],
+        patterns: &[16, 9, 7, 0, 21],
+        posts: &[12, 7, 0, 19],
+        objects: &[10, 22, 14, 17, 5],
+        atmos: &[0, 12, 10, 6, 9],
+    },
 ];
 
 /// Where each thing sits on the vibe map (see src/analysis/vibe.rs):
@@ -691,7 +839,7 @@ pub const THEMES: [Theme; 19] = [
 type Spot = (f32, f32);
 
 /// red room, white corridor, terminal, ultraviolet, amber, rainbow
-pub const THEME_VIBE: [Spot; 19] = [
+pub const THEME_VIBE: [Spot; 22] = [
     (-0.8, 0.8),
     (0.6, -0.4),
     (-0.6, 0.2),
@@ -711,6 +859,9 @@ pub const THEME_VIBE: [Spot; 19] = [
     (-0.4, 0.0),
     (0.8, 0.0),
     (0.2, -0.2),
+    (-0.3, 0.5),
+    (0.2, 0.3),
+    (0.5, -0.4),
 ];
 /// neon, acid, fire, ice, ultraviolet, red, white, terminal, violet, amber,
 /// gold, rose gold, noctiluca, vaporwave, sunset, forest, blood orange,
@@ -873,6 +1024,210 @@ const VIBE_SPREAD: f32 = 0.7;
 /// is 0.5 minus this times the intensity.
 const FILL_BY_INTENSITY: f32 = 0.25;
 
+// ---- Taste: what a blind look test taught the director (2026-11-22) ----
+//
+// 140 looks, half from the themes and half thrown together at random, were
+// rated without names (love, good, meh, no). Two things came out of it.
+//
+// What was liked, part by part: each value's mean score, pulled towards the
+// overall mean by how few times it was seen, and turned into a weight from
+// 0.55 to 1.45. Nothing is ruled out: the weights only tilt the odds, and the
+// decks still bring every value round.
+//
+// And restraint, the clearest lesson: the busier a look, the lower it
+// scored, from 2.5 out of 3 for looks with nothing busy in them down to
+// under 1 for looks busy everywhere. Each value has a busyness (0 calm, 1
+// busy: many colours, dense patterns, glitches); a look whose parts add up
+// to more than CALM_BUDGET is weighed down for every bit over.
+
+/// tunnel, grid, liquid, shapes, void, marble, sea, nebula, mirrors, leds,
+/// concrete, mercury, contours, plasma, voronoi, fractal, ink, lasers, sky, silk
+const BG_TASTE: [f32; 20] = [
+    1.04, 0.78, 0.90, 1.45, 1.12, 0.90, 1.36, 0.69, 1.21, 1.25, 1.19, 1.19, 1.12, 0.98, 0.55, 0.75,
+    0.84, 0.70, 1.45, 1.14,
+];
+const BG_BUSY: [f32; 20] = [
+    0.5, 0.5, 0.3, 0.0, 0.0, 0.5, 0.2, 0.7, 0.3, 0.5, 0.0, 0.3, 0.3, 0.7, 1.0, 1.0, 0.3, 0.8, 0.0,
+    0.2,
+];
+/// rings, scope, kaleido, bars, stripes, frames, radar, spiral, halftone,
+/// lissajous, moire, ribbon, truchet, barcode, flower, checker, strings,
+/// mandala, ascii, stringart, pixelsort, orbits
+const PATTERN_TASTE: [f32; 22] = [
+    0.95, 0.94, 1.45, 0.78, 0.98, 1.45, 1.22, 1.45, 0.84, 1.26, 1.00, 0.70, 0.94, 1.19, 0.80, 0.55,
+    1.29, 0.75, 0.98, 0.63, 1.24, 1.03,
+];
+const PATTERN_BUSY: [f32; 22] = [
+    0.2, 0.0, 0.4, 0.5, 0.3, 0.0, 0.2, 0.3, 0.6, 0.0, 0.8, 0.6, 0.8, 0.3, 0.7, 1.0, 0.0, 0.8, 0.5,
+    0.9, 0.3, 0.2,
+];
+/// neon, acid, fire, ice, ultraviolet, red, white, terminal, violet, amber,
+/// gold, rose gold, noctiluca, vaporwave, sunset, forest, blood orange,
+/// pastel, cyber, bauhaus, infrared, aurora. The one-colour palettes were
+/// the best liked of anything.
+const PALETTE_TASTE: [f32; 22] = [
+    1.19, 0.72, 0.78, 1.02, 1.04, 1.37, 1.45, 1.45, 1.45, 0.74, 0.89, 0.68, 0.68, 1.11, 0.65, 1.45,
+    0.84, 1.03, 0.62, 0.55, 0.84, 0.84,
+];
+const PALETTE_BUSY: [f32; 22] = [
+    0.6, 0.5, 0.4, 0.4, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.2, 0.9, 0.7, 0.1, 0.2, 0.8, 1.0,
+    1.0, 0.6, 0.6,
+];
+/// clean, trails, zoom, kaleido, drift, crt, prism, floor, vhs, thermal, film,
+/// chroma, glow, datamosh, feedback, riso, slit scan, heat haze, iridescent,
+/// long exposure. The effects that pull the colours together (thermal,
+/// riso, glow, crt) won; the ones that tear the picture apart lost.
+const POST_TASTE: [f32; 20] = [
+    1.13, 0.90, 0.55, 0.75, 1.00, 1.36, 1.08, 1.07, 1.03, 1.45, 1.08, 0.55, 1.45, 0.58, 0.84, 1.45,
+    1.39, 0.68, 0.98, 0.98,
+];
+const POST_BUSY: [f32; 20] = [
+    0.0, 0.3, 1.0, 1.0, 0.2, 0.0, 0.6, 0.0, 0.4, 0.0, 0.0, 1.0, 0.0, 1.0, 0.6, 0.0, 0.4, 0.7, 0.5,
+    0.3,
+];
+/// none, mirror ball, skull, prism, gem, knot, eye, monolith, chain, speakers,
+/// crystal, planet, corridor, bust, diamond, vinyl, jellyfish, rose, blob,
+/// pyramid, moon, dna, butterfly, cubes, astronaut. (How often there is no
+/// object is decided apart, so "none" weighs 1.)
+const OBJECT_TASTE: [f32; 25] = [
+    1.00, 0.59, 1.14, 1.04, 0.68, 1.45, 1.45, 1.15, 0.75, 1.19, 1.39, 0.55, 1.45, 0.94, 0.84, 1.45,
+    1.02, 1.14, 0.84, 0.77, 0.94, 0.77, 1.45, 0.57, 0.72,
+];
+const OBJECT_BUSY: [f32; 25] = [
+    0.0, 0.6, 0.2, 0.3, 0.3, 0.1, 0.1, 0.0, 0.6, 0.2, 0.2, 0.7, 0.0, 0.2, 0.3, 0.1, 0.3, 0.3, 0.3,
+    0.4, 0.1, 0.5, 0.3, 0.8, 0.3,
+];
+/// none, storm, smoke, fire, beams, aurora, snow, rain, bubbles, fireflies,
+/// rays, caustics, flares, meteors
+const ATMOS_TASTE: [f32; 14] = [
+    0.89, 1.38, 0.59, 1.19, 1.21, 1.10, 1.26, 1.08, 0.95, 0.74, 0.88, 0.78, 1.03, 1.16,
+];
+const ATMOS_BUSY: [f32; 14] = [
+    0.0, 0.1, 0.6, 0.4, 0.2, 0.3, 0.2, 0.2, 0.4, 0.6, 0.2, 0.6, 0.3, 0.1,
+];
+/// In THEMES order. The themes reworked after the test (noctiluca, velvet,
+/// bauhaus) and the three made from it are not yet proven, so they sit
+/// near 1 rather than at their old scores.
+const THEME_TASTE: [f32; 22] = [
+    1.45, 1.45, 1.45, 0.91, 0.91, 1.09, 1.09, 1.45, 1.00, 0.90, 1.09, 0.75, 0.91, 1.02, 1.02, 1.02,
+    1.02, 1.02, 1.25, 1.15, 1.15, 1.15,
+];
+/// How busy a look may be before it is weighed down. Looks rated in the
+/// test scored about 2.3 below it and fell steadily above.
+const CALM_BUDGET: f32 = 1.5;
+/// How hard each unit of busyness over the budget weighs a choice down: by
+/// e^-RESTRAINT, about a seventh. Over a long run this cuts the looks busy
+/// enough to have scored badly from one in seven to about one in thirteen.
+const RESTRAINT: f32 = 2.0;
+/// The least that liking and restraint together leave of a value's weight,
+/// so the disliked and the busy still turn up now and then, and every
+/// value comes round within the hours the tests promise.
+const TASTE_FLOOR: f32 = 0.1;
+/// The least restraint leaves of a choice that makes the look too busy.
+const RESTRAINT_FLOOR: f32 = 0.15;
+/// The same for objects, whose fit to the vibe already counts twice (see
+/// `new_object`): with the lower floor the least liked of them vanished
+/// for hours in music far from where they sit.
+const OBJECT_TASTE_FLOOR: f32 = 0.6;
+/// Glass objects were liked better than chrome (1.75 against 1.47 of 3).
+const GLASS_CHANCE: f32 = 0.6;
+/// What the parts of a new look are taken to be until they are chosen:
+/// nothing busy, so each choice is weighed against the ones made before it.
+const QUIET: Look = Look {
+    bg: 4,
+    pattern: 5,
+    palette: 6,
+    post: 0,
+    object: 0,
+    material: 0,
+    atmos: 0,
+};
+
+/// One part of a look, for weighing a value for it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Part {
+    Bg,
+    Pattern,
+    Palette,
+    Post,
+    Object,
+    Atmos,
+}
+
+impl Part {
+    const ALL: [Part; 6] = [
+        Part::Bg,
+        Part::Pattern,
+        Part::Palette,
+        Part::Post,
+        Part::Object,
+        Part::Atmos,
+    ];
+
+    /// (where each value sits on the vibe map, how well each was liked, how busy each is)
+    fn tables(self) -> (&'static [Spot], &'static [f32], &'static [f32]) {
+        match self {
+            Part::Bg => (&BG_VIBE, &BG_TASTE, &BG_BUSY),
+            Part::Pattern => (&PATTERN_VIBE, &PATTERN_TASTE, &PATTERN_BUSY),
+            Part::Palette => (&PALETTE_VIBE, &PALETTE_TASTE, &PALETTE_BUSY),
+            Part::Post => (&POST_VIBE, &POST_TASTE, &POST_BUSY),
+            Part::Object => (&OBJECT_VIBE, &OBJECT_TASTE, &OBJECT_BUSY),
+            Part::Atmos => (&ATMOS_VIBE, &ATMOS_TASTE, &ATMOS_BUSY),
+        }
+    }
+
+    fn of(self, l: &Look) -> usize {
+        match self {
+            Part::Bg => l.bg,
+            Part::Pattern => l.pattern,
+            Part::Palette => l.palette,
+            Part::Post => l.post,
+            Part::Object => l.object,
+            Part::Atmos => l.atmos,
+        }
+    }
+
+    fn with(self, mut l: Look, v: usize) -> Look {
+        match self {
+            Part::Bg => l.bg = v,
+            Part::Pattern => l.pattern = v,
+            Part::Palette => l.palette = v,
+            Part::Post => l.post = v,
+            Part::Object => l.object = v,
+            Part::Atmos => l.atmos = v,
+        }
+        l
+    }
+}
+
+/// How busy a look is: its parts' busyness added up, 0 to 6.
+fn busyness(l: &Look) -> f32 {
+    Part::ALL
+        .iter()
+        .map(|p| p.tables().2.get(p.of(l)).copied().unwrap_or(0.0))
+        .sum()
+}
+
+/// 1 for a look within the budget, less for every bit over it.
+fn restraint(l: &Look) -> f32 {
+    (-(busyness(l) - CALM_BUDGET).max(0.0) * RESTRAINT).exp()
+}
+
+/// How much the director wants `v` for `part` of `look`: how well it suits
+/// the vibe, how well it was liked, and whether the look stays clear with it.
+fn weigh(taste: Taste, part: Part, v: usize, look: &Look) -> f32 {
+    let (spots, liked, _) = part.tables();
+    let fit = spots.get(v).map_or(1.0, |at| vibe_weight(taste, *at));
+    let calm = restraint(&part.with(*look, v)).max(RESTRAINT_FLOOR);
+    let taste = liked.get(v).copied().unwrap_or(1.0) * calm;
+    let floor = if part == Part::Object {
+        OBJECT_TASTE_FLOOR
+    } else {
+        TASTE_FLOOR
+    };
+    fit * taste.max(floor)
+}
+
 /// The vibe as the director weighs it: where the music is, and how much a
 /// thing far from it still counts (the "variety" setting).
 #[derive(Clone, Copy, Debug)]
@@ -1001,6 +1356,10 @@ pub struct Director {
     theme_bag: Bag,
     pattern_bag: Bag,
     object_bag: Bag,
+    /// Backgrounds and atmospheres are dealt like patterns, so the less
+    /// liked still come round, only later.
+    bg_bag: Bag,
+    atmos_bag: Bag,
     theme: usize,
     /// Changes made in the current theme, counted in phrases.
     phrases_in_theme: u32,
@@ -1059,6 +1418,8 @@ impl Director {
             theme_bag,
             pattern_bag: Bag::new(PATTERNS.len()),
             object_bag: Bag::new(OBJECTS.len()),
+            bg_bag: Bag::new(BACKGROUNDS.len()),
+            atmos_bag: Bag::new(ATMOSPHERES.len()),
             theme,
             phrases_in_theme: 0,
             tension: 0.0,
@@ -1189,12 +1550,7 @@ impl Director {
                 } else {
                     let t = &THEMES[self.theme];
                     Look {
-                        bg: self.rng.other_by_vibe(
-                            self.to.bg,
-                            t.backgrounds,
-                            &BG_VIBE,
-                            &self.taste(),
-                        ),
+                        bg: self.choose(Part::Bg, t.backgrounds, self.to),
                         ..self.to
                     }
                 };
@@ -1304,7 +1660,8 @@ impl Director {
             hold,
             // Squared: the theme sets the whole tone, so it follows the vibe
             // more firmly than the single parts inside it do.
-            |t| vibe_weight(v, THEME_VIBE[t]).powi(2),
+            // And by how well each was liked.
+            |t| vibe_weight(v, THEME_VIBE[t]).powi(2) * THEME_TASTE[t],
             &mut self.rng,
         );
         self.phrases_in_theme = 0;
@@ -1345,18 +1702,60 @@ impl Director {
     fn theme_change(&mut self) -> Look {
         self.new_theme();
         let t = &THEMES[self.theme];
-        Look {
-            bg: self
-                .rng
-                .other_by_vibe(self.to.bg, t.backgrounds, &BG_VIBE, &self.taste()),
-            palette: self.rng.other_by_vibe(
-                self.to.palette,
-                t.palettes,
-                &PALETTE_VIBE,
-                &self.taste(),
-            ),
-            ..self.to
+        let mut look = self.to;
+        look.palette = self.choose(Part::Palette, t.palettes, look);
+        look.bg = self.choose(Part::Bg, t.backgrounds, look);
+        look
+    }
+
+    /// An atmosphere other than `current`. Whether it is none is weighed as
+    /// any choice is (calm music likes none); which one it is otherwise is
+    /// dealt from the deck, so each comes round.
+    fn choose_atmos(&mut self, options: &[usize], current: usize, look: Look) -> usize {
+        let taste = self.taste();
+        let some: Vec<usize> = options.iter().copied().filter(|a| *a != 0).collect();
+        if current != 0 && options.contains(&0) {
+            let w = |a: usize| weigh(taste, Part::Atmos, a, &look);
+            let none = w(0);
+            let rest: f32 = some.iter().filter(|a| **a != current).map(|a| w(*a)).sum();
+            if self.rng.unit() * (none + rest) < none {
+                return 0;
+            }
         }
+        self.atmos_bag.deal_vibe(
+            current,
+            &some,
+            some.len() / 3,
+            |a| weigh(taste, Part::Atmos, a, &look),
+            &mut self.rng,
+        )
+    }
+
+    /// A value for `part` of `look` from `options`, other than the one it
+    /// has, weighed by the vibe, the taste and restraint.
+    fn choose(&mut self, part: Part, options: &[usize], look: Look) -> usize {
+        self.choose_other(part, options, part.of(&look), look)
+    }
+
+    /// Like `choose`, but other than `current` rather than the look's own.
+    fn choose_other(&mut self, part: Part, options: &[usize], current: usize, look: Look) -> usize {
+        let taste = self.taste();
+        if part == Part::Atmos {
+            return self.choose_atmos(options, current, look);
+        }
+        let bag = match part {
+            Part::Bg => &mut self.bg_bag,
+            Part::Pattern => &mut self.pattern_bag,
+            Part::Object => &mut self.object_bag,
+            _ => return self.rng.choose(taste, part, options, current, look),
+        };
+        bag.deal_vibe(
+            current,
+            options,
+            options.len() / 3,
+            |v| weigh(taste, part, v, &look),
+            &mut self.rng,
+        )
     }
 
     pub fn next_palette(&mut self) {
@@ -1402,7 +1801,11 @@ impl Director {
         // now and then like ink, mostly a plain fade.
         let roll = self.rng.unit();
         self.transition = if fade_secs <= DROP_FADE_SECS + 1e-3 {
-            if roll < 0.5 { Transition::Zoom } else { Transition::Fade }
+            if roll < 0.5 {
+                Transition::Zoom
+            } else {
+                Transition::Fade
+            }
         } else if roll < 0.3 {
             Transition::Ink
         } else {
@@ -1433,12 +1836,12 @@ impl Director {
         if c.pattern == main.pattern || !t.patterns.contains(&c.pattern) {
             c.pattern =
                 self.complement_rng
-                    .other_by_vibe(main.pattern, t.patterns, &PATTERN_VIBE, &taste);
+                    .choose(taste, Part::Pattern, t.patterns, main.pattern, c);
         }
         if c.bg == main.bg || !t.backgrounds.contains(&c.bg) {
             c.bg = self
                 .complement_rng
-                .other_by_vibe(main.bg, t.backgrounds, &BG_VIBE, &taste);
+                .choose(taste, Part::Bg, t.backgrounds, main.bg, c);
         }
         c.wrapped()
     }
@@ -1459,26 +1862,22 @@ impl Director {
         } else {
             t.posts.to_vec()
         };
-        Look {
-            bg: self
-                .rng
-                .other_by_vibe(self.to.bg, t.backgrounds, &BG_VIBE, &v),
-            pattern: self.pattern_bag.deal_vibe(
-                self.to.pattern,
-                t.patterns,
-                t.patterns.len() / 3,
-                |p| vibe_weight(v, PATTERN_VIBE[p]),
-                &mut self.rng,
-            ),
-            palette: self
-                .rng
-                .other_by_vibe(self.to.palette, t.palettes, &PALETTE_VIBE, &v),
-            post: self.rng.other_by_vibe(self.to.post, &posts, &POST_VIBE, &v),
-            atmos: self
-                .rng
-                .other_by_vibe(self.to.atmos, t.atmos, &ATMOS_VIBE, &v),
-            ..self.new_object(self.to)
-        }
+        // One part at a time, the colour first (it sets the tone), each
+        // weighed against the parts already chosen so the whole stays clear.
+        let was = self.to;
+        let mut n = QUIET;
+        n.palette = self
+            .rng
+            .choose(v, Part::Palette, t.palettes, was.palette, n);
+        n.bg = self.choose_other(Part::Bg, t.backgrounds, was.bg, n);
+        n.pattern = self.choose_other(Part::Pattern, t.patterns, was.pattern, n);
+        n.post = self.rng.choose(v, Part::Post, &posts, was.post, n);
+        n.atmos = self.choose_other(Part::Atmos, t.atmos, was.atmos, n);
+        self.new_object(Look {
+            object: was.object,
+            material: was.material,
+            ..n
+        })
     }
 
     /// `look` with a different object, or with none. An object is followed
@@ -1501,14 +1900,15 @@ impl Director {
             look.object = 0;
             return look;
         }
+        let ctx = look;
         look.object = self.object_bag.deal_vibe(
             look.object,
             objects,
             objects.len() / 3,
-            |o| vibe_weight(taste, OBJECT_VIBE[o]).powi(2),
+            |o| vibe_weight(taste, OBJECT_VIBE[o]) * weigh(taste, Part::Object, o, &ctx),
             &mut self.rng,
         );
-        look.material = self.rng.below(MATERIALS.len());
+        look.material = usize::from(self.rng.unit() < GLASS_CHANCE);
         look
     }
 
@@ -1549,25 +1949,13 @@ impl Director {
             open.extend([4, 4]);
             open[self.rng.below(open.len())]
         };
-        let v = self.taste();
+        let ctx = look;
         match choice {
-            0 => look.bg = self.rng.other_by_vibe(look.bg, t.backgrounds, &BG_VIBE, &v),
-            1 => {
-                look.pattern = self.pattern_bag.deal_vibe(
-                    look.pattern,
-                    t.patterns,
-                    t.patterns.len() / 3,
-                    |p| vibe_weight(v, PATTERN_VIBE[p]),
-                    &mut self.rng,
-                )
-            }
-            2 => {
-                look.palette = self
-                    .rng
-                    .other_by_vibe(look.palette, t.palettes, &PALETTE_VIBE, &v)
-            }
-            3 => look.post = self.rng.other_by_vibe(look.post, t.posts, &POST_VIBE, &v),
-            5 => look.atmos = self.rng.other_by_vibe(look.atmos, t.atmos, &ATMOS_VIBE, &v),
+            0 => look.bg = self.choose(Part::Bg, t.backgrounds, ctx),
+            1 => look.pattern = self.choose(Part::Pattern, t.patterns, ctx),
+            2 => look.palette = self.choose(Part::Palette, t.palettes, ctx),
+            3 => look.post = self.choose(Part::Post, t.posts, ctx),
+            5 => look.atmos = self.choose(Part::Atmos, t.atmos, ctx),
             _ => look = self.new_object(look),
         }
         look
@@ -1619,23 +2007,28 @@ impl Rng {
         *options.last().unwrap()
     }
 
-    /// A member of `options` other than `current`, by how well each suits
-    /// the vibe; `current` itself if it is the only option.
-    fn other_by_vibe(
-        &mut self,
-        current: usize,
-        options: &[usize],
-        spots: &[Spot],
-        vibe: &Taste,
-    ) -> usize {
+    /// A member of `options` other than `current`, each as likely as its
+    /// weight; `current` itself if it is the only option.
+    fn other(&mut self, current: usize, options: &[usize], weight: impl Fn(usize) -> f32) -> usize {
         let rest: Vec<usize> = options.iter().copied().filter(|o| *o != current).collect();
         if rest.is_empty() {
             current
         } else {
-            self.weighted(&rest, |o| {
-                spots.get(o).map_or(1.0, |at| vibe_weight(vibe, *at))
-            })
+            self.weighted(&rest, weight)
         }
+    }
+
+    /// A value for `part` from `options`, other than `current`, weighed
+    /// (see `weigh`) as part of `look`.
+    fn choose(
+        &mut self,
+        taste: Taste,
+        part: Part,
+        options: &[usize],
+        current: usize,
+        look: Look,
+    ) -> usize {
+        self.other(current, options, |v| weigh(taste, part, v, &look))
     }
 }
 
@@ -1818,7 +2211,11 @@ mod tests {
         let mut distinct = first.clone();
         distinct.sort();
         distinct.dedup();
-        assert_eq!(distinct.len(), first.len(), "a theme came back early: {first:?}");
+        assert_eq!(
+            distinct.len(),
+            first.len(),
+            "a theme came back early: {first:?}"
+        );
         // And within an hour every theme has had its turn.
         let more = play(&mut d, 2048, 8192 - 2048);
         let mut themes: Vec<usize> = frames.iter().chain(&more).map(|(_, o)| o.theme).collect();
@@ -2258,12 +2655,21 @@ mod tests {
         // themes, all shown for all but the odd unlucky seed.
         let missed: Vec<Vec<&str>> = (0..10)
             .map(|seed| {
-                let seen: Vec<usize> = play(&mut Director::new(seed), 0, 16384).iter().map(|(_, o)| o.to.atmos).collect();
-                (0..ATMOSPHERES.len()).filter(|k| !seen.contains(k)).map(|k| ATMOSPHERES[k]).collect::<Vec<_>>()
+                let seen: Vec<usize> = play(&mut Director::new(seed), 0, 16384)
+                    .iter()
+                    .map(|(_, o)| o.to.atmos)
+                    .collect();
+                (0..ATMOSPHERES.len())
+                    .filter(|k| !seen.contains(k))
+                    .map(|k| ATMOSPHERES[k])
+                    .collect::<Vec<_>>()
             })
             .filter(|m: &Vec<&str>| !m.is_empty())
             .collect();
-        assert!(missed.len() <= 1, "seeds that missed an atmosphere: {missed:?}");
+        assert!(
+            missed.len() <= 1,
+            "seeds that missed an atmosphere: {missed:?}"
+        );
         let mut d = Director::new(24);
         let frames = play(&mut d, 0, 16384);
         let mut in_theme = 0;
@@ -2475,11 +2881,110 @@ mod tests {
                 list.dedup();
             }
             if objects.len() < OBJECTS.len() || patterns.len() < PATTERNS.len() {
-                let missing: Vec<&str> = (0..PATTERNS.len()).filter(|k| !patterns.contains(k)).map(|k| PATTERNS[k]).collect();
-                unlucky.push((seed, objects.len(), missing));
+                let missing: Vec<&str> = (0..PATTERNS.len())
+                    .filter(|k| !patterns.contains(k))
+                    .map(|k| PATTERNS[k])
+                    .collect();
+                let gone: Vec<&str> = (0..OBJECTS.len())
+                    .filter(|k| !objects.contains(k))
+                    .map(|k| OBJECTS[k])
+                    .collect();
+                unlucky.push((seed, objects.len(), [missing, gone].concat()));
             }
         }
         assert!(unlucky.len() <= 1, "{unlucky:?}");
+    }
+
+    #[test]
+    fn restraint_weighs_down_busy_looks() {
+        assert_eq!(restraint(&QUIET), 1.0);
+        // Voronoi, checker, the cyber palette and chroma: everything busy.
+        let loud = Look {
+            bg: 14,
+            pattern: 15,
+            palette: 18,
+            post: 11,
+            ..QUIET
+        };
+        assert!(busyness(&loud) >= 4.0 && restraint(&loud) < 0.1);
+        // So in a busy look the calm choice weighs more than the busy one,
+        // though both were liked about the same.
+        let taste = Taste::from(&Vibe::default());
+        let busy_look = Look {
+            bg: 14,
+            palette: 18,
+            ..QUIET
+        };
+        assert!(
+            weigh(taste, Part::Pattern, 5, &busy_look)
+                > 2.0 * weigh(taste, Part::Pattern, 10, &busy_look)
+        );
+        // And nothing weighs nothing.
+        for part in Part::ALL {
+            let (spots, liked, busy) = part.tables();
+            assert_eq!((liked.len(), busy.len()), (spots.len(), spots.len()));
+            for v in 0..spots.len() {
+                assert!(weigh(taste, part, v, &loud) >= TASTE_FLOOR * VIBE_FLOOR);
+            }
+        }
+        assert_eq!(THEME_TASTE.len(), THEMES.len());
+    }
+
+    #[test]
+    fn the_show_follows_the_look_test() {
+        // Over a long night the director's looks are calmer and better liked
+        // than looks thrown together from the same themes without taste.
+        // Looks this busy scored about 1 of 3 in the test.
+        const LOUD: f32 = 2.5;
+        let liked = |l: &Look| -> f32 {
+            Part::ALL.iter().map(|p| p.tables().1[p.of(l)]).sum::<f32>() / 6.0
+        };
+        let mut rng = Rng::new(7);
+        let (mut blind_busy, mut blind_liked, mut n_blind, mut blind_loud) = (0.0, 0.0, 0.0, 0.0);
+        for t in &THEMES {
+            for _ in 0..400 {
+                let with_object = rng.unit() < 0.5;
+                let mut pick = |list: &[usize]| list[rng.below(list.len())];
+                let l = Look {
+                    bg: pick(t.backgrounds),
+                    pattern: pick(t.patterns),
+                    palette: pick(t.palettes),
+                    post: pick(t.posts),
+                    object: if with_object { pick(t.objects) } else { 0 },
+                    material: 0,
+                    atmos: pick(t.atmos),
+                };
+                blind_busy += busyness(&l);
+                blind_loud += f32::from(busyness(&l) > LOUD);
+                blind_liked += liked(&l);
+                n_blind += 1.0;
+            }
+        }
+        let (mut busy, mut like, mut n, mut loud) = (0.0, 0.0, 0.0, 0.0);
+        for seed in 0..6 {
+            for (_, o) in play(&mut Director::new(seed), 0, 4096) {
+                if o.to.post == DRIFT {
+                    continue;
+                }
+                busy += busyness(&o.to);
+                loud += f32::from(busyness(&o.to) > LOUD);
+                like += liked(&o.to);
+                n += 1.0;
+            }
+        }
+        let (bb, bl, db, dl) = (
+            blind_busy / n_blind,
+            blind_liked / n_blind,
+            busy / n,
+            like / n,
+        );
+        let (bo, dout) = (blind_loud / n_blind, loud / n);
+        println!(
+            "busyness: blind {bb:.2}, director {db:.2}; liked: blind {bl:.3}, director {dl:.3}; loud: blind {bo:.3}, director {dout:.3}"
+        );
+        assert!(db < bb - 0.1, "busyness: blind {bb} director {db}");
+        assert!(dl > bl + 0.02, "liked: blind {bl} director {dl}");
+        assert!(dout < 0.65 * bo, "loud looks: blind {bo} director {dout}");
     }
 
     #[test]
