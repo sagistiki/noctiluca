@@ -12,7 +12,7 @@ struct Obj {
     model: mat4x4f,
     view_proj: mat4x4f,
     eye: vec4f,
-    params: vec4f,   // material (0 chrome, 1 glass), body light 0..1, glow strength, unused
+    params: vec4f,   // material (0 chrome, 1 glass, 2 stone), body light 0..1, glow strength, sparkle
 }
 @group(2) @binding(0) var<uniform> obj: Obj;
 
@@ -86,6 +86,21 @@ fn fs_object(in: ObjOut, @builtin(front_facing) front: bool) -> @location(0) vec
     if (obj.params.x < 0.5) {
         // Chrome: a mirror, a little darker straight on than at the edges.
         col = surroundings(r) * mix(0.55, 1.0, fresnel) + highlight;
+    } else if (obj.params.x > 1.5) {
+        // Stone: a matte surface lit by the room: a key light from above in
+        // the palette's colour that swells with the kick, a cool fill from
+        // the left, a rim of light round the edge, and a little of the
+        // visuals bouncing off it.
+        // The key comes from the side, as the sun lights the moon, so
+        // every crater throws its shadow.
+        let albedo = vec3f(0.62, 0.6, 0.58);
+        let sun = normalize(vec3f(0.85, 0.35, 0.4));
+        let lit = max(dot(n, sun), 0.0);
+        let fill = max(dot(n, normalize(vec3f(-0.6, 0.2, 0.7))), 0.0);
+        let rim = pow(1.0 - facing, 3.0);
+        col = albedo * (pal(0.9) * pow(lit, 1.3) * (1.4 + 0.6 * u.beat.y) + vec3f(0.025) + vec3f(0.35, 0.4, 0.5) * fill * 0.18)
+            + surroundings(n) * 0.06 * albedo
+            + pal(0.8) * rim * 0.3;
     } else {
         // Glass: the picture behind, bent by the surface and split into
         // colours, with the mirror image taking over at grazing angles.

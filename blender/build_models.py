@@ -543,6 +543,336 @@ MODELS = {
     "corridor": build_corridor,
 }
 
+# ------------------------------------------------ the 2026-11-22 objects
+#
+# Two come from free sources, downloaded once into blender/sources/ (kept
+# out of the repository) and reduced here:
+#   bust       Marble Bust 01 by Rico Cilliers, Poly Haven, CC0:
+#              https://polyhaven.com/a/marble_bust_01
+#   astronaut  Astronaut, NASA 3D Resources (model by DigitalSpace):
+#              https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Astronaut
+# The others are built here.
+
+SOURCES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources")
+
+
+def imported(path, name, faces):
+    """A model from a file, as one mesh without its materials, reduced to
+    about `faces` faces."""
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"download it first, to {path}")
+    bpy.ops.import_scene.gltf(filepath=path)
+    bpy.context.view_layer.update()
+    meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+    # Keep where each part really is: a file may stand its model up (or
+    # scale it) through a parent, which goes when the helpers are removed.
+    for obj in meshes:
+        world = obj.matrix_world.copy()
+        obj.parent = None
+        obj.matrix_world = world
+    for obj in [o for o in bpy.context.scene.objects if o.type != "MESH"]:
+        bpy.data.objects.remove(obj, do_unlink=True)
+    obj = join(meshes, name) if len(meshes) > 1 else bake(meshes[0])
+    obj.name = name
+    obj.data.materials.clear()
+    if len(obj.data.polygons) > faces:
+        decimate(obj, faces)
+    return obj
+
+
+def build_bust():
+    """A classical marble bust (Poly Haven, CC0)."""
+    bust = imported(os.path.join(SOURCES, "marble_bust", "marble_bust_01_1k.gltf"), "bust", 16000)
+    smooth(bust, 0.4, 2)
+    shade(bust, flat=False)
+    normalise([bust])
+    return [bust]
+
+
+def build_astronaut():
+    """An astronaut in a spacesuit (NASA 3D Resources)."""
+    man = imported(os.path.join(SOURCES, "astronaut", "Astronaut.glb"), "astronaut", 12000)
+    shade(man, flat=False)
+    normalise([man])
+    return [man]
+
+
+def build_diamond():
+    """A round brilliant, cut to the classic proportions: an eight-sided
+    table, star and bezel facets on the crown, a sixteen-sided girdle and a
+    pavilion down to the culet; the hull of those points, every facet flat."""
+    points = []
+    for k in range(8):  # table
+        a = (k + 0.5) * math.tau / 8
+        points.append((0.55 * math.cos(a), 0.55 * math.sin(a), 0.16))
+    for k in range(8):  # bezel points, between the table's corners
+        a = k * math.tau / 8
+        points.append((0.80 * math.cos(a), 0.80 * math.sin(a), 0.085))
+    for k in range(16):  # girdle, top and bottom edge
+        a = (k + 0.5) * math.tau / 16
+        points.append((math.cos(a), math.sin(a), 0.01))
+        points.append((math.cos(a), math.sin(a), -0.01))
+    for k in range(8):  # pavilion mains
+        a = (k + 0.5) * math.tau / 8
+        points.append((0.42 * math.cos(a), 0.42 * math.sin(a), -0.27))
+    points.append((0, 0, -0.43))  # culet
+    mesh = bpy.data.meshes.new("diamond")
+    bm = bmesh.new()
+    for p in points:
+        bm.verts.new(p)
+    bmesh.ops.convex_hull(bm, input=list(bm.verts))
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new("diamond", mesh)
+    scene().collection.objects.link(obj)
+    shade(obj, flat=True)
+    normalise([obj])
+    return [obj]
+
+
+def build_vinyl():
+    """A record on a platter: grooves as fine rings, a label that glows in
+    the palette's colour, the spindle, and a tone arm resting in the groove."""
+    disc = cylinder(1.0, 0.02, vertices=96)
+    disc.name = "vinyl"
+    bm = bmesh.new()
+    bm.from_mesh(disc.data)
+    top = [f for f in bm.faces if f.normal.z > 0.9]
+    # Rings of grooves from the label out to the edge.
+    for k in range(34):
+        # Each inset shrinks the same inner face again, a little up or down.
+        bmesh.ops.inset_region(bm, faces=top, thickness=0.018, depth=0.0015 if k % 2 else -0.0015)
+    bm.to_mesh(disc.data)
+    bm.free()
+    label = cylinder(0.34, 0.026, vertices=64)
+    label.name = "vinyl_label_glow"
+    spindle = cylinder(0.025, 0.09, loc=(0, 0, 0.04), vertices=16)
+    platter = cylinder(1.04, 0.06, loc=(0, 0, -0.045), vertices=96)
+    base = box((0.18, 0.18, 0.1), loc=(1.18, 0.75, 0.0))
+    arm = tube([(1.18, 0.75, 0.08), (1.05, 0.2, 0.1), (0.62, -0.18, 0.08)], 0.018, "arm", cyclic=False)
+    head = box((0.08, 0.14, 0.03), loc=(0.6, -0.22, 0.05), rot=(0, 0, 0.6))
+    deck = join([disc, spindle, platter, base, arm, head], "vinyl")
+    shade(deck, flat=False)
+    normalise([deck, label])
+    return [deck, label]
+
+
+def build_jellyfish():
+    """A jellyfish: a bell with a ruffled rim that glows, four frilled oral
+    arms and long trailing tentacles."""
+    bell = sphere(1.0, segments=64, rings=32)
+    bell.name = "jellyfish"
+    bm = bmesh.new()
+    bm.from_mesh(bell.data)
+    for v in bm.verts:
+        x, y, z = v.co
+        if z < -0.05:
+            # The underside is open and hollow: the lower half folds up inside.
+            z = -0.05 + (z + 0.05) * -0.35
+        a = math.atan2(y, x)
+        ruffle = 1.0 + 0.05 * math.sin(a * 16) * smoothstep(0.3, -0.05, z)
+        v.co = (x * ruffle, y * ruffle, z * 0.75)
+    bm.to_mesh(bell.data)
+    bm.free()
+    rim = tube([(math.cos(a) * 1.0, math.sin(a) * 1.0, -0.04 + 0.03 * math.sin(a * 16)) for a in [k * math.tau / 96 for k in range(96)]], 0.035, "jellyfish_rim_glow")
+    parts = [bell]
+    rng = random.Random(7)
+    for k in range(4):  # oral arms: thick, wavy, near the middle
+        a = k * math.tau / 4 + 0.4
+        pts = [(0.25 * math.cos(a) + 0.12 * math.sin(t * 1.7 + k), 0.25 * math.sin(a) + 0.12 * math.cos(t * 1.3 + k), -0.1 - t * 0.55) for t in [i * 0.25 for i in range(13)]]
+        parts.append(tube(pts, 0.06, f"arm{k}", cyclic=False))
+    for k in range(16):  # tentacles: thin and long, from the rim
+        a = k * math.tau / 16 + rng.uniform(-0.1, 0.1)
+        sway = rng.uniform(0, math.tau)
+        pts = [(0.92 * math.cos(a) * (1 - t * 0.04) + 0.08 * math.sin(t * 1.1 + sway), 0.92 * math.sin(a) * (1 - t * 0.04) + 0.08 * math.cos(t * 0.9 + sway), -0.05 - t * 0.6) for t in [i * 0.4 for i in range(16)]]
+        parts.append(tube(pts, 0.012, f"tentacle{k}", cyclic=False, resolution=4))
+    body = join(parts, "jellyfish")
+    shade(body, flat=False)
+    normalise([body, rim])
+    return [body, rim]
+
+
+def build_rose():
+    """A rose in full bloom: cupped petals in a spiral, small and tight in
+    the heart, opening wider outward, on a short stem with two leaves."""
+    petals = []
+    count = 34
+    for k in range(count):
+        t = k / (count - 1)
+        petal = sphere(1.0, segments=24, rings=16)
+        bm = bmesh.new()
+        bm.from_mesh(petal.data)
+        for v in bm.verts:
+            x, y, z = v.co
+            # A thin cupped shell: keep the half facing out, curl its lip.
+            y = abs(y) * 0.18 + 0.02
+            lip = smoothstep(0.2, 1.0, z) * (0.25 + 0.5 * t)
+            v.co = (x * 0.55, y + lip * 0.5, z * 0.75 + 0.75)
+        bm.to_mesh(petal.data)
+        bm.free()
+        size = 0.25 + 0.75 * t
+        petal.scale = (size, size, size * (1.0 - 0.25 * t))
+        petal.rotation_euler = (math.radians(10 + 55 * t), 0, k * math.radians(137.5))
+        petal.location = (0, 0, -0.25 * t)
+        bake(petal)
+        petals.append(petal)
+    stem = tube([(0, 0, -0.2), (0.05, 0, -1.0), (0.0, 0.03, -1.9)], 0.05, "stem", cyclic=False)
+    leaves = []
+    for side in (-1, 1):
+        leaf = sphere(0.3, segments=16, rings=8)
+        leaf.scale = (1.0, 0.12, 0.45)
+        leaf.rotation_euler = (0, math.radians(50 * side), 0)
+        leaf.location = (0.3 * side, 0, -1.0 + 0.2 * side)
+        bake(leaf)
+        leaves.append(leaf)
+    rose = join(petals + [stem] + leaves, "rose")
+    shade(rose, flat=False)
+    normalise([rose])
+    return [rose]
+
+
+def build_blob():
+    """A drop of liquid metal: three spheres melted into one smooth body,
+    caught mid-wobble."""
+    bpy.ops.object.metaball_add(type="BALL", radius=1.0, location=(0, 0, 0))
+    ball = bpy.context.active_object
+    meta = ball.data
+    meta.resolution = 0.06
+    meta.render_resolution = 0.06
+    for (x, y, z, r) in [(0.55, 0.1, 0.25, 0.75), (-0.5, -0.15, -0.1, 0.8), (0.05, 0.35, -0.55, 0.6), (-0.1, -0.3, 0.6, 0.5)]:
+        e = meta.elements.new()
+        e.co = (x, y, z)
+        e.radius = r
+    bpy.ops.object.convert(target="MESH")
+    blob = bpy.context.active_object
+    blob.name = "blob"
+    smooth(blob, 0.5, 6)
+    decimate(blob, 14000)
+    shade(blob, flat=False)
+    normalise([blob])
+    return [blob]
+
+
+def build_pyramid():
+    """A pyramid of the Giza proportions, its edges softened."""
+    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=1.0, radius2=0.0, depth=0.9, location=(0, 0, 0))
+    pyr = bpy.context.active_object
+    pyr.name = "pyramid"
+    pyr.rotation_euler = (0, 0, math.radians(45))
+    bake(pyr)
+    modifier(pyr, "BEVEL", width=0.01, segments=2)
+    bake(pyr)
+    shade(pyr, flat=True)
+    normalise([pyr])
+    return [pyr]
+
+
+def build_moon():
+    """The moon: a sphere pitted with craters of every size, each a dish
+    with a raised rim."""
+    moon = sphere(1.0, segments=128, rings=64)
+    moon.name = "moon"
+    rng = random.Random(11)
+    craters = []
+    for _ in range(170):
+        d = Vector((rng.gauss(0, 1), rng.gauss(0, 1), rng.gauss(0, 1))).normalized()
+        craters.append((d, rng.uniform(0.03, 0.2) ** 1.5 * 1.4))
+    bm = bmesh.new()
+    bm.from_mesh(moon.data)
+    for v in bm.verts:
+        n = v.co.normalized()
+        h = 0.0
+        for d, r in craters:
+            x = math.acos(max(-1.0, min(1.0, n.dot(d)))) / r
+            if x < 1.6:
+                h += r * 0.1 * (-(1 - x * x) if x < 1 else 0.35 * math.exp(-((x - 1.05) / 0.2) ** 2))
+        v.co = n * (1.0 + h)
+    bm.to_mesh(moon.data)
+    bm.free()
+    shade(moon, flat=False)
+    normalise([moon])
+    return [moon]
+
+
+def build_dna():
+    """A DNA double helix: two backbones winding round each other, joined
+    by base pairs, the pairs' middles glowing."""
+    turns, height, radius = 3.0, 4.0, 0.45
+    parts, glow = [], []
+    for side in (0, 1):
+        pts = []
+        for i in range(181):
+            t = i / 180
+            a = t * turns * math.tau + side * math.pi
+            pts.append((radius * math.cos(a), radius * math.sin(a), (t - 0.5) * height))
+        parts.append(tube(pts, 0.05, f"backbone{side}", cyclic=False, resolution=8))
+    for k in range(30):
+        t = (k + 0.5) / 30
+        a = t * turns * math.tau
+        z = (t - 0.5) * height
+        p0 = Vector((radius * math.cos(a), radius * math.sin(a), z))
+        p1 = -Vector((p0.x, p0.y, 0)) + Vector((0, 0, z))
+        mid = (p0 + p1) / 2
+        rung = cylinder(0.022, (p1 - p0).length * 0.9, loc=mid, vertices=10)
+        rung.rotation_euler = (math.pi / 2, 0, a + math.pi / 2)
+        bake(rung)
+        parts.append(rung)
+        light = sphere(0.045, loc=mid, segments=12, rings=6)
+        glow.append(light)
+    helix = join(parts, "dna")
+    lights = join(glow, "dna_pairs_glow")
+    shade(helix, flat=False)
+    normalise([helix, lights])
+    return [helix, lights]
+
+
+def build_butterfly():
+    """A butterfly with its wings open: fore and hind wings on each side,
+    gently bent, and a slim body."""
+    wings = []
+    for side in (-1, 1):
+        for (w, h, lift, back) in [(1.0, 0.75, 0.25, 0.1), (0.7, 0.6, -0.35, -0.05)]:
+            wing = sphere(0.5, segments=24, rings=12)
+            wing.scale = (w, h, 0.02)
+            wing.location = (side * (w * 0.5 + 0.06), back, lift)
+            wing.rotation_euler = (0, math.radians(-12 * side), math.radians(18 * side * (1 if lift > 0 else -1)))
+            bake(wing)
+            wings.append(wing)
+    body = sphere(0.06, segments=16, rings=12)
+    body.scale = (1.0, 1.0, 8.0)
+    bake(body)
+    fly = join(wings + [body], "butterfly")
+    shade(fly, flat=False)
+    normalise([fly])
+    return [fly]
+
+
+def build_cubes():
+    """One cube of the swarm, its edges bevelled to catch the light."""
+    cube = box((1.0, 1.0, 1.0))
+    cube.name = "cubes"
+    modifier(cube, "BEVEL", width=0.06, segments=3)
+    bake(cube)
+    shade(cube, flat=False)
+    normalise([cube])
+    return [cube]
+
+
+MODELS.update({
+    "bust": build_bust,
+    "diamond": build_diamond,
+    "vinyl": build_vinyl,
+    "jellyfish": build_jellyfish,
+    "rose": build_rose,
+    "blob": build_blob,
+    "pyramid": build_pyramid,
+    "moon": build_moon,
+    "dna": build_dna,
+    "butterfly": build_butterfly,
+    "cubes": build_cubes,
+    "astronaut": build_astronaut,
+})
+
 # ------------------------------------------------------------ export, render
 
 

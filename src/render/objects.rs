@@ -185,6 +185,18 @@ pub fn placements(object: usize, u: &Uniforms, appear: f32) -> Vec<Placed> {
         "crystal" => crystal(u, appear),
         "planet" => planet(u, appear),
         "corridor" => corridor(u, appear),
+        "bust" => bust(u, appear),
+        "diamond" => diamond_orbit(u, appear),
+        "vinyl" => vinyl(u, appear),
+        "jellyfish" => jellyfish(u, appear),
+        "rose" => rose(u, appear),
+        "blob" => blob(u, appear),
+        "pyramid" => pyramid(u, appear),
+        "moon" => moon(u, appear),
+        "dna" => dna(u, appear),
+        "butterfly" => butterflies(u, appear),
+        "cubes" => cube_swarm(u, appear),
+        "astronaut" => astronaut(u, appear),
         _ => vec![Placed::plain(placement(object, u, appear))],
     }
 }
@@ -593,6 +605,191 @@ fn chains(u: &Uniforms, appear: f32) -> Vec<Mat4> {
                 * Mat4::from_translation(Vec3::new(0.0, slide, 0.0))
         })
         .collect()
+}
+
+// ------------------------------------------------ the 2026-11-22 objects
+
+/// A placement from a position, a turn and a size (a number, or one per axis).
+fn at(pos: Vec3, turn: Quat, scale: Vec3) -> Mat4 {
+    Mat4::from_translation(pos) * Mat4::from_quat(turn) * Mat4::from_scale(scale)
+}
+
+/// A classical bust, big and a little low, looking slowly round the room
+/// as a statue in a gallery seems to when you walk past it.
+fn bust(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = 1.25 * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_y(0.55 * (mid * 0.12).sin()) * Quat::from_rotation_x(0.06 * (level * 0.2).sin());
+    vec![Placed::plain(at(Vec3::new(0.0, -0.35, 0.0), turn, Vec3::splat(scale)))]
+}
+
+/// A big diamond in the middle, turning, with a ring of small ones orbiting
+/// it on a tilted path; all of them throw sparkles with the highs.
+fn diamond_orbit(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, _, beats] = u.flow;
+    let a = appear.clamp(0.0, 1.0);
+    let tilt = Quat::from_rotation_x(0.3);
+    let mut out = vec![Placed {
+        at: at(Vec3::ZERO, tilt * Quat::from_rotation_y(mid * 0.3), Vec3::splat(0.8 * a * (1.0 + 0.05 * u.beat[1]))),
+        body: 1.0,
+        glow: 1.0,
+        sparkle: 1.0,
+    }];
+    for i in 0..8 {
+        let k = i as f32;
+        let angle = k * TAU / 8.0 + beats * TAU / 64.0;
+        let ring = Quat::from_rotation_x(0.35) * Vec3::new(angle.cos() * 2.1, 0.0, angle.sin() * 2.1);
+        let turn = Quat::from_rotation_y(mid * 0.5 + k) * Quat::from_rotation_x(0.6 + 0.3 * k.sin());
+        out.push(Placed {
+            at: at(ring, turn, Vec3::splat(0.28 * a)),
+            body: 1.0,
+            glow: 1.0,
+            sparkle: 1.0,
+        });
+    }
+    out
+}
+
+/// A record spinning on a turntable, seen from above at an angle, a third
+/// of a turn a beat; its label glows with the kick.
+fn vinyl(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let beats = u.flow[3];
+    let scale = 1.35 * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_x(0.95) * Quat::from_rotation_z(0.25) * Quat::from_rotation_y(-beats * TAU / 3.0);
+    vec![Placed {
+        at: at(Vec3::new(0.0, -0.1, 0.0), turn, Vec3::splat(scale)),
+        body: 1.0,
+        glow: 0.6 + 0.9 * u.beat[1],
+        sparkle: 0.0,
+    }]
+}
+
+/// Jellyfish drifting up through dark water at different depths, each
+/// pulsing its bell with the kick, their rims glowing.
+fn jellyfish(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let a = appear.clamp(0.0, 1.0);
+    let pulse = u.beat[1];
+    (0..5)
+        .map(|n| {
+            let k = n as f32;
+            let z = -0.3 - 1.8 * rand(k, 1.0);
+            let span = half_height(z) * 2.0 + 2.5;
+            let rise = (level * (0.06 + 0.04 * rand(k, 2.0)) + rand(k, 3.0) * span).rem_euclid(span);
+            let pos = Vec3::new((k - 2.0) * 1.3 + 0.3 * (mid * 0.1 + k).sin(), rise - span / 2.0, z);
+            let squeeze = 1.0 - 0.12 * pulse * (0.6 + 0.4 * rand(k, 5.0));
+            let turn = Quat::from_rotation_y(mid * 0.1 + k) * Quat::from_rotation_z(0.15 * (level * 0.3 + k).sin());
+            let size = (0.85 + 0.35 * rand(k, 6.0)) * a;
+            Placed {
+                at: at(pos, turn, Vec3::new(size / squeeze.sqrt(), size * squeeze, size / squeeze.sqrt())),
+                body: 0.9,
+                glow: 0.7 + 0.8 * pulse,
+                sparkle: 0.0,
+            }
+        })
+        .collect()
+}
+
+/// One rose, large, its bloom tipped toward the room, turning slowly.
+fn rose(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = 1.2 * appear.clamp(0.0, 1.0) * (1.0 + 0.04 * u.beat[1]);
+    let turn = Quat::from_rotation_x(0.55 + 0.05 * (level * 0.3).sin()) * Quat::from_rotation_y(mid * 0.15);
+    vec![Placed::plain(at(Vec3::new(0.0, 0.05, 0.0), turn, Vec3::splat(scale)))]
+}
+
+/// A drop of liquid metal, turning and wobbling: it squashes on the kick
+/// and springs back.
+fn blob(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let a = appear.clamp(0.0, 1.0);
+    let squash = u.beat[1] * 0.14;
+    let wobble = 0.05 * (level * 1.3).sin();
+    let turn = Quat::from_rotation_y(mid * 0.4) * Quat::from_rotation_x(0.3 * (level * 0.25).sin());
+    let scale = Vec3::new(1.0 + squash + wobble, 1.0 - squash, 1.0 + squash - wobble) * 1.05 * a;
+    vec![Placed::plain(at(Vec3::ZERO, turn, scale))]
+}
+
+/// A big pyramid in the middle of the picture, turning slowly.
+fn pyramid(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let mid = u.flow[1];
+    let scale = 1.25 * appear.clamp(0.0, 1.0) * (1.0 + 0.03 * u.beat[1]);
+    vec![Placed::plain(at(Vec3::ZERO, Quat::from_rotation_x(0.15) * Quat::from_rotation_y(mid * 0.12), Vec3::splat(scale)))]
+}
+
+/// A huge moon rising at the top right, half out of the picture, turning
+/// slowly enough that its craters seem still.
+fn moon(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let level = u.flow[2];
+    let scale = 1.9 * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_y(level * 0.02) * Quat::from_rotation_x(0.3);
+    vec![Placed::plain(at(Vec3::new(1.5, 0.75, -1.5), turn, Vec3::splat(scale)))]
+}
+
+/// A tall DNA helix through the middle of the picture, spinning, its base
+/// pairs lighting up with the beat.
+fn dna(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, _, beats] = u.flow;
+    let scale = 2.1 * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_z(0.35) * Quat::from_rotation_y(mid * 0.5);
+    let since = beats.fract();
+    vec![Placed {
+        at: at(Vec3::ZERO, turn, Vec3::splat(scale)),
+        body: 1.0,
+        glow: 0.5 + 1.0 * (-4.0 * since).exp(),
+        sparkle: 0.0,
+    }]
+}
+
+/// A swarm of butterflies flying loops through the room, each beating its
+/// wings (the wings fold toward the body and open again) at its own pace.
+fn butterflies(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let t = u.res_time[2];
+    let level = u.flow[2];
+    let a = appear.clamp(0.0, 1.0);
+    (0..14)
+        .map(|n| {
+            let k = n as f32;
+            let speed = 0.12 + 0.08 * rand(k, 1.0);
+            let phase = rand(k, 2.0) * TAU;
+            let s = level * speed + phase;
+            let pos = Vec3::new(3.2 * (s * 0.9).sin(), 1.2 * (s * 1.3 + k).sin(), -1.5 + 1.8 * (s * 0.7 + 2.0 * k).cos());
+            let ahead = Vec3::new(3.2 * 0.9 * (s * 0.9).cos(), 1.2 * 1.3 * (s * 1.3 + k).cos(), -1.8 * 0.7 * (s * 0.7 + 2.0 * k).sin());
+            let heading = ahead.x.atan2(ahead.z);
+            let flap = ((t * (7.0 + 3.0 * rand(k, 3.0)) + phase).sin().abs()).max(0.15);
+            let size = (0.42 + 0.12 * rand(k, 4.0)) * a;
+            let turn = Quat::from_rotation_y(heading * 0.5) * Quat::from_rotation_x(-0.45);
+            Placed::plain(at(pos, turn, Vec3::new(size * flap, size, size)))
+        })
+        .collect()
+}
+
+/// Sixty small cubes flowing through the room like a flock of birds: each
+/// on its own loop around a shared path, the flock opening up on the kick.
+fn cube_swarm(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let a = appear.clamp(0.0, 1.0);
+    let open = 1.0 + 0.35 * u.beat[1];
+    (0..60)
+        .map(|n| {
+            let k = n as f32;
+            let s = level * 0.12 + k * 0.045;
+            let path = Vec3::new(2.6 * (s * 1.7).sin(), 1.0 * (s * 2.3).sin(), -1.2 + 1.2 * (s * 1.1).cos());
+            let spread = Vec3::new(rand(k, 1.0) - 0.5, rand(k, 2.0) - 0.5, rand(k, 3.0) - 0.5) * 0.9 * open;
+            let turn = Quat::from_rotation_x(mid * 0.4 + k) * Quat::from_rotation_y(mid * 0.3 + 2.0 * k);
+            Placed::plain(at(path + spread, turn, Vec3::splat((0.07 + 0.05 * rand(k, 4.0)) * a)))
+        })
+        .collect()
+}
+
+/// An astronaut floating weightless in the middle of the room, tumbling
+/// very slowly.
+fn astronaut(u: &Uniforms, appear: f32) -> Vec<Placed> {
+    let [_, mid, level, _] = u.flow;
+    let scale = 1.0 * appear.clamp(0.0, 1.0);
+    let turn = Quat::from_rotation_z(0.35 * (level * 0.05).sin() + 0.2) * Quat::from_rotation_y(mid * 0.08 + 0.6) * Quat::from_rotation_x(0.25 * (level * 0.07).sin());
+    let drift = Vec3::new(0.35 * (level * 0.04).sin(), 0.15 * (level * 0.06).cos(), 0.0);
+    vec![Placed::plain(at(drift, turn, Vec3::splat(scale)))]
 }
 
 #[cfg(test)]

@@ -37,7 +37,7 @@ pub const PALETTE_NAMES: [&str; 22] = [
     "aurora",
 ];
 /// The 3D objects, by the name of their file in assets/models. "none" is no object.
-pub const OBJECTS: [&str; 13] = [
+pub const OBJECTS: [&str; 25] = [
     "none",
     "mirrorball",
     "skull",
@@ -51,6 +51,18 @@ pub const OBJECTS: [&str; 13] = [
     "crystal",
     "planet",
     "corridor",
+    "bust",
+    "diamond",
+    "vinyl",
+    "jellyfish",
+    "rose",
+    "blob",
+    "pyramid",
+    "moon",
+    "dna",
+    "butterfly",
+    "cubes",
+    "astronaut",
 ];
 pub const MATERIALS: [&str; 2] = ["chrome", "glass"];
 /// The atmosphere over everything: weather, fire, light. "storm" is clouds
@@ -494,7 +506,9 @@ pub struct Theme {
 //   atmos        0 none  1 storm  2 smoke  3 fire  4 beams  5 aurora  6 snow  7 rain  8 bubbles
 //                9 fireflies  10 rays  11 caustics  12 flares  13 meteors
 //   objects      1 mirror ball  2 skull  3 prism  4 gem  5 knot  6 eye  7 monolith  8 chain
-//                9 speakers  10 crystal  11 planet  12 corridor
+//                9 speakers  10 crystal  11 planet  12 corridor  13 bust  14 diamond  15 vinyl
+//                16 jellyfish  17 rose  18 blob  19 pyramid  20 moon  21 dna  22 butterfly
+//                23 cubes  24 astronaut
 pub const THEMES: [Theme; 19] = [
     Theme {
         name: "red room",
@@ -512,7 +526,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[5, 0, 4, 7, 2],
         posts: &[0, 1, 3, 7, 10],
         objects: &[1, 4, 3, 5, 10, 12],
-        atmos: &[0, 4, 2, 5, 10],
+        atmos: &[0, 4, 2, 5, 10, 6],
     },
     Theme {
         name: "terminal",
@@ -521,7 +535,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[1, 4, 5, 6, 18, 13, 20],
         posts: &[5, 8],
         objects: &[6, 2, 1, 9, 12],
-        atmos: &[0, 2, 1],
+        atmos: &[0, 2, 1, 7],
     },
     Theme {
         name: "ultraviolet",
@@ -530,7 +544,7 @@ pub const THEMES: [Theme; 19] = [
         patterns: &[2, 0, 5, 8, 7, 10, 12],
         posts: &[6, 3, 1, 9],
         objects: &[4, 5, 6, 3, 10, 11],
-        atmos: &[0, 5, 4, 2, 11],
+        atmos: &[0, 5, 4, 2, 11, 8],
     },
     Theme {
         name: "amber",
@@ -547,7 +561,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[0, 1, 2, 3, 7, 8, 9, 13, 14, 15, 17],
         patterns: &[0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
         posts: &[1, 2, 3, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18],
-        objects: &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        objects: &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
         atmos: &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
     },
     // The luxe, clean and heavy themes (2026-11-22).
@@ -557,7 +571,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[4, 5, 11, 8],
         patterns: &[14, 19, 5, 0, 17],
         posts: &[12, 0, 1, 19, 7],
-        objects: &[1, 4, 3, 7, 5],
+        objects: &[1, 4, 3, 7, 5, 13, 14, 15],
         atmos: &[0, 4, 2, 12, 10],
     },
     Theme {
@@ -566,8 +580,8 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[5, 19, 4],
         patterns: &[14, 17, 0, 9, 21],
         posts: &[12, 0, 18, 7],
-        objects: &[4, 3, 10, 1],
-        atmos: &[0, 2, 5, 10],
+        objects: &[4, 3, 10, 1, 13, 17],
+        atmos: &[0, 2, 5, 10, 6],
     },
     Theme {
         name: "noctiluca",
@@ -575,7 +589,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[6, 16, 7, 2],
         patterns: &[21, 9, 0, 11, 16],
         posts: &[12, 1, 19, 17],
-        objects: &[11, 10, 4, 1],
+        objects: &[11, 10, 4, 1, 16, 20],
         atmos: &[0, 2, 11, 8, 9, 10],
     },
     Theme {
@@ -584,7 +598,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[19, 16, 4, 5],
         patterns: &[11, 4, 5, 17],
         posts: &[12, 1, 10, 7],
-        objects: &[1, 2, 7, 8],
+        objects: &[1, 2, 7, 8, 17, 15],
         atmos: &[0, 2, 3, 4, 7, 10],
     },
     Theme {
@@ -593,8 +607,8 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[11, 19, 8, 3],
         patterns: &[11, 9, 14, 19],
         posts: &[12, 18, 6, 0],
-        objects: &[1, 4, 3, 5, 10],
-        atmos: &[0, 4, 5, 12, 11],
+        objects: &[1, 4, 3, 5, 10, 18, 14],
+        atmos: &[0, 4, 5, 12, 11, 8],
     },
     Theme {
         name: "bauhaus",
@@ -602,7 +616,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[4, 14, 12],
         patterns: &[12, 15, 13, 0, 4],
         posts: &[0, 15, 11],
-        objects: &[7, 3, 5],
+        objects: &[7, 3, 5, 19, 23],
         atmos: &[0, 4],
     },
     Theme {
@@ -611,7 +625,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[10, 17, 9, 1, 0],
         patterns: &[3, 4, 13, 20, 18],
         posts: &[11, 13, 16, 5, 8, 1],
-        objects: &[9, 7, 8, 2, 12],
+        objects: &[9, 7, 8, 2, 12, 15, 23],
         atmos: &[0, 1, 4, 2],
     },
     Theme {
@@ -620,7 +634,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[13, 15, 2, 16],
         patterns: &[10, 15, 20, 2],
         posts: &[9, 11, 14, 13, 16],
-        objects: &[2, 6, 5, 11],
+        objects: &[2, 6, 5, 11, 18, 21],
         atmos: &[0, 3, 1],
     },
     Theme {
@@ -629,7 +643,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[7, 15, 4, 0],
         patterns: &[21, 0, 9, 6, 14],
         posts: &[1, 19, 12, 14],
-        objects: &[11, 10, 4, 1],
+        objects: &[11, 10, 4, 1, 24, 20, 21],
         atmos: &[0, 5, 13],
     },
     Theme {
@@ -638,7 +652,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[14, 12, 4, 18],
         patterns: &[14, 0, 19, 21, 8],
         posts: &[0, 12, 18, 17],
-        objects: &[10, 4, 3, 7],
+        objects: &[10, 4, 3, 7, 14, 19],
         atmos: &[0, 5, 2, 6, 13, 11],
     },
     Theme {
@@ -647,7 +661,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[16, 2, 12, 7],
         patterns: &[21, 16, 11, 10, 12],
         posts: &[12, 17, 1, 19],
-        objects: &[6, 5, 11, 10],
+        objects: &[6, 5, 11, 10, 22, 16],
         atmos: &[0, 2, 5, 9, 7],
     },
     Theme {
@@ -656,7 +670,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[13, 11, 19, 14, 9],
         patterns: &[17, 10, 11, 14, 2],
         posts: &[18, 6, 3, 12, 14],
-        objects: &[4, 3, 10, 1, 5],
+        objects: &[4, 3, 10, 1, 5, 18, 22, 23],
         atmos: &[0, 5, 4, 8, 12],
     },
     Theme {
@@ -665,7 +679,7 @@ pub const THEMES: [Theme; 19] = [
         backgrounds: &[14, 8, 7, 4],
         patterns: &[17, 14, 5, 19, 7],
         posts: &[12, 6, 10, 0],
-        objects: &[7, 1, 3, 4, 12],
+        objects: &[7, 1, 3, 4, 12, 13, 19, 17],
         atmos: &[0, 4, 2, 10],
     },
 ];
@@ -803,7 +817,7 @@ const POST_VIBE: [Spot; 20] = [
 ];
 /// none, mirror ball, skull, prism, gem, knot, eye, monolith, chain,
 /// speakers, crystal, planet, corridor. "None" sits with calm music.
-const OBJECT_VIBE: [Spot; 13] = [
+const OBJECT_VIBE: [Spot; 25] = [
     (0.0, -0.9),
     (0.9, 0.4),
     (-0.8, 0.6),
@@ -817,6 +831,18 @@ const OBJECT_VIBE: [Spot; 13] = [
     (0.6, -0.3),
     (0.0, -0.8),
     (-0.2, 0.6),
+    (0.3, -0.5),
+    (0.8, 0.3),
+    (0.2, 0.4),
+    (-0.2, -0.6),
+    (0.4, -0.5),
+    (0.5, 0.2),
+    (-0.3, -0.1),
+    (-0.2, -0.7),
+    (0.1, 0.3),
+    (0.6, -0.3),
+    (0.2, 0.8),
+    (-0.1, -0.4),
 ];
 /// none, storm, smoke, fire, beams, aurora, snow, rain, bubbles, fireflies,
 /// rays, caustics, flares, meteors
@@ -2193,12 +2219,12 @@ mod tests {
 
     #[test]
     fn objects_come_and_go() {
-        // Within an hour every object appears, for all but the odd unlucky
-        // seed (each stays a few minutes, and there are twelve), in both
-        // materials, and there are stretches with no object at all.
+        // Within three hours every object appears, for all but the odd
+        // unlucky seed (each stays a few minutes, and there are twenty-four),
+        // in both materials, and there are stretches with no object at all.
         let mut unlucky = Vec::new();
         for seed in 0..20 {
-            let frames = play(&mut Director::new(seed), 0, 8192);
+            let frames = play(&mut Director::new(seed), 0, 24576);
             let mut objects: Vec<usize> = frames.iter().map(|(_, o)| o.to.object).collect();
             objects.sort();
             objects.dedup();
@@ -2228,13 +2254,18 @@ mod tests {
 
     #[test]
     fn atmospheres_come_and_go_with_the_themes() {
-        // Two hours at 128 BPM: fourteen atmospheres, each tied to a few themes.
+        // Two hours at 128 BPM: fourteen atmospheres, each tied to a few
+        // themes, all shown for all but the odd unlucky seed.
+        let missed: Vec<Vec<&str>> = (0..10)
+            .map(|seed| {
+                let seen: Vec<usize> = play(&mut Director::new(seed), 0, 16384).iter().map(|(_, o)| o.to.atmos).collect();
+                (0..ATMOSPHERES.len()).filter(|k| !seen.contains(k)).map(|k| ATMOSPHERES[k]).collect::<Vec<_>>()
+            })
+            .filter(|m: &Vec<&str>| !m.is_empty())
+            .collect();
+        assert!(missed.len() <= 1, "seeds that missed an atmosphere: {missed:?}");
         let mut d = Director::new(24);
         let frames = play(&mut d, 0, 16384);
-        let mut seen: Vec<usize> = frames.iter().map(|(_, o)| o.to.atmos).collect();
-        seen.sort();
-        seen.dedup();
-        assert_eq!(seen.len(), ATMOSPHERES.len(), "atmospheres shown: {seen:?}");
         let mut in_theme = 0;
         for w in frames.windows(2) {
             let (beat, o) = w[1];

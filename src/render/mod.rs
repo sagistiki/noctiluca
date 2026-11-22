@@ -708,7 +708,11 @@ impl Renderer {
             .flat_map(|(model, object, material, appear)| {
                 objects::placements(object, &v.current, appear)
                     .into_iter()
-                    .map(move |at| (model, at, material))
+                    .map(move |at| {
+                        // The moon is stone, whatever the look's material.
+                        let material = if OBJECTS.get(object) == Some(&"moon") { 2 } else { material };
+                        (model, at, material)
+                    })
             })
             .take(MAX_OBJECT_DRAWS)
             .collect();
