@@ -24,16 +24,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Count the look library from the code
         run: python3 .github/scripts/library.py src/director.rs > site/library.json
       # Each deploy's own CSS and scripts: a browser never mixes a new page
       # with the last deploy's files from its cache.
       - name: Stamp the build on the page's files
         run: sed -i "s/?v=BUILD/?v=${GITHUB_SHA::8}/g" site/index.html
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
