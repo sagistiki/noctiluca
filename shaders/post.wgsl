@@ -3,6 +3,8 @@
 //
 //   u.post[0] = trail seconds, zoom per second, rotation per second, kaleidoscope segments
 //   u.post[1] = colour split, wobble, glow, extra zoom on each kick
+//   u.post[2].y = treatment; this pass draws 6 datamosh, 7 feedback,
+//                 8 slit scan and 9 heat haze, at strength u.overlay.z
 
 @group(1) @binding(0) var scene_tex: texture_2d<f32>;
 @group(1) @binding(1) var prev_tex: texture_2d<f32>;
@@ -68,7 +70,17 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         let a = abs(fract(atan2(centre.y, centre.x) / slice + 0.5) - 0.5) * slice;
         scene_at = r * vec2f(cos(a), sin(a));
     }
-    let scene_uv = scene_at / aspect + 0.5;
+    var scene_uv = scene_at / aspect + 0.5;
+    let effect = u32(round(u.post[2].y));
+    let amount = clamp(u.overlay.z, 0.0, 1.0);
+    let t = u.res_time.z;
+
+    // Heat haze: the air shimmers, rising, more with the bass.
+    if (effect == 9u) {
+        let q = vec2f(in.uv.x * 7.0, in.uv.y * 11.0 + t * 1.7);
+        let haze = vec2f(noise(q) - 0.5, noise(q + 19.7) - 0.5) * vec2f(0.006, 0.010);
+        scene_uv += haze * (0.7 + 0.8 * u.bands.y) * amount;
+    }
 
     // Colour split: red and blue are read slightly further out and in, more so on a kick.
     let split = normalize(centre + 1e-5) / aspect * u.post[1].x * (0.4 + r) * (1.0 + 2.0 * u.beat.y);
@@ -100,8 +112,35 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
 
     // The echo fades with the chosen half-life and its hue drifts a little.
     let keep = select(0.0, exp(-dt / max(u.post[0].x, 1e-4)), u.post[0].x > 0.0);
-    old = max(hue_shift(old, 0.4 * dt), vec3f(0.0)) * keep;
+    // Feedback turns its echoes round the colour wheel much faster.
+    let turn = select(0.4, 0.4 + 2.6 * amount, effect == 7u);
+    // ...and each echo is darker than the one before, so the tunnel fades
+    // outward instead of filling up with copies of whatever is brightest.
+    let dim = select(1.0, exp(-dt * 5.0 * amount), effect == 7u);
+    old = max(hue_shift(old, turn * dt), vec3f(0.0)) * keep * dim;
 
     // "Brightest wins" instead of adding: an echo can never pile up into white.
-    return vec4f(max(fresh, old), 1.0);
+    var out = max(fresh, old);
+
+    // Datamosh: the screen in blocks; each block keeps sliding the last
+    // frame along its own way for a beat, until it is refreshed: a few at a
+    // time, most of them on the kick.
+    if (effect == 6u && amount > 0.0) {
+        let block = floor(in.uv * u.res_time.xy / 28.0);
+        let beat = floor(u.flow.w);
+        let slide = (vec2f(hash21(block * 1.7 + beat), hash21(block * 2.3 + beat + 5.0)) - 0.5) * 0.012
+            + vec2f(0.004 * sin(u.flow.y), 0.0);
+        let smeared = textureSample(prev_tex, samp, in.uv - slide).rgb;
+        let refresh = step(hash21(block + beat * 13.1), 0.25 + 0.75 * u.beat.y);
+        out = mix(out, mix(smeared, fresh, refresh), amount);
+    }
+    // Slit scan: only a slit down the middle is now; to its sides the past
+    // streams outward, so every moment leaves a band.
+    if (effect == 8u && amount > 0.0) {
+        let earlier = vec2f(centre.x * exp(-1.3 * dt), centre.y);
+        let past = textureSample(prev_tex, samp, earlier / aspect + 0.5).rgb * exp(-0.1 * dt);
+        let slit = smoothstep(0.035, 0.0, abs(centre.x));
+        out = mix(out, max(mix(past, fresh, slit), fresh * 0.12), amount);
+    }
+    return vec4f(out, 1.0);
 }

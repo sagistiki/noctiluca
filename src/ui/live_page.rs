@@ -93,6 +93,13 @@ fn program_column(ui: &mut Ui, state: &AppState, settings: &mut Settings, live: 
     ui.scope_builder(egui::UiBuilder::new().max_rect(pads_rect), |ui| pads(ui, state, settings, live, pages, actions));
 }
 
+/// Text centred at `at`, at `size` or smaller so it fits in `max_w`.
+fn fit_text(p: &egui::Painter, at: egui::Pos2, text: &str, size: f32, family: egui::FontFamily, colour: Color32, max_w: f32) {
+    let galley = p.layout_no_wrap(text.to_string(), egui::FontId::new(size, family.clone()), colour);
+    let size = if galley.size().x > max_w { (size * max_w / galley.size().x).max(7.5) } else { size };
+    p.text(at, egui::Align2::CENTER_CENTER, text, egui::FontId::new(size, family), colour);
+}
+
 /// The director's pad: "Director" over its state, Auto (changing by itself)
 /// or Held, with a moving dot while it is in charge.
 fn director_pad(ui: &mut Ui, w: f32, word: &str, sub: &str, auto: bool) -> egui::Response {
@@ -101,9 +108,10 @@ fn director_pad(ui: &mut Ui, w: f32, word: &str, sub: &str, auto: bool) -> egui:
     let edge = if auto { style::GREEN } else { style::AMBER };
     let p = ui.painter();
     p.rect(rect, CornerRadius::same(9), fill, Stroke::new(1.5, edge), egui::StrokeKind::Inside);
-    p.text(rect.center_top() + vec2(0.0, 14.0), egui::Align2::CENTER_CENTER, "Director", egui::FontId::proportional(10.5), style::MUTED);
-    p.text(rect.center() + vec2(0.0, 1.0), egui::Align2::CENTER_CENTER, word, egui::FontId::new(16.0, egui::FontFamily::Name("semibold".into())), edge);
-    p.text(rect.center() + vec2(0.0, 22.0), egui::Align2::CENTER_CENTER, sub, egui::FontId::proportional(10.0), style::TERTIARY);
+    let room = rect.width() - 10.0;
+    fit_text(p, rect.center_top() + vec2(0.0, 14.0), "Director", 10.5, egui::FontFamily::Proportional, style::MUTED, room);
+    fit_text(p, rect.center() + vec2(0.0, 1.0), word, 16.0, egui::FontFamily::Name("semibold".into()), edge, room);
+    fit_text(p, rect.center() + vec2(0.0, 22.0), sub, 10.0, egui::FontFamily::Proportional, style::TERTIARY, room);
     if auto {
         // A slow pulse: it is working.
         let t = ui.input(|i| i.time) as f32;
@@ -124,8 +132,9 @@ fn pad(ui: &mut Ui, w: f32, icon: Icon, name: &str, key: &str, on: bool, tip: &s
     let fg = if on { Color32::WHITE } else { style::TEXT };
     icons::paint(ui, Rect::from_center_size(rect.center() - vec2(0.0, 14.0), vec2(18.0, 18.0)), icon, fg);
     let p = ui.painter();
-    p.text(rect.center() + vec2(0.0, 7.0), egui::Align2::CENTER_CENTER, name, egui::FontId::new(12.0, egui::FontFamily::Name("semibold".into())), fg);
-    p.text(rect.center() + vec2(0.0, 23.0), egui::Align2::CENTER_CENTER, key, egui::FontId::proportional(10.5), if on { Color32::from_white_alpha(200) } else { style::TERTIARY });
+    let room = rect.width() - 10.0;
+    fit_text(p, rect.center() + vec2(0.0, 7.0), name, 12.0, egui::FontFamily::Name("semibold".into()), fg, room);
+    fit_text(p, rect.center() + vec2(0.0, 23.0), key, 10.5, egui::FontFamily::Proportional, if on { Color32::from_white_alpha(200) } else { style::TERTIARY }, room);
     r.on_hover_text(tip)
 }
 

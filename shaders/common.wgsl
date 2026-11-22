@@ -43,10 +43,11 @@ fn centred(uv: vec2f) -> vec2f {
     return vec2f((uv.x * 2.0 - 1.0) * aspect, 1.0 - uv.y * 2.0);
 }
 
-// The current colour palette. t wraps, so any number works.
+// The current colour palette. t wraps, so any number works. Limited to
+// 0..1: some palettes overshoot on purpose to hold a pure colour longer.
 fn pal(t: f32) -> vec3f {
-    return u.palette[0].rgb
-        + u.palette[1].rgb * cos(TAU * (u.palette[2].rgb * t + u.palette[3].rgb));
+    return clamp(u.palette[0].rgb
+        + u.palette[1].rgb * cos(TAU * (u.palette[2].rgb * t + u.palette[3].rgb)), vec3f(0.0), vec3f(1.0));
 }
 
 fn rot(a: f32) -> mat2x2f {

@@ -221,7 +221,8 @@ fn crt(col: vec3f, pixel: vec2f) -> vec3f {
 }
 
 // Treatments: the whole picture as if seen through some medium. Chosen by
-// post[2].y (1 VHS, 2 thermal, 3 film), faded in and out by overlay.z.
+// post[2].y (1 VHS, 2 thermal, 3 film, 4 riso, 5 iridescent), faded in and
+// out by overlay.z. (6 to 9 are drawn by post.wgsl.)
 
 // VHS: each line slips sideways a little, more in a band that rolls down
 // the screen and on the kick; red and blue come apart; the bottom lines
@@ -250,6 +251,34 @@ fn vhs(col: vec3f, uv: vec2f) -> vec3f {
     var c = mix(vec3f(luma), col, 0.8) * vec3f(1.02, 0.98, 1.05);   // tape colour: a bit washed out
     c *= 0.9 + 0.1 * sin(uv.y * u.res_time.y * 1.5);                   // scan lines
     return c;
+}
+
+// Riso: a two-ink print, glowing on black: pink takes the warm part of the
+// picture and blue the cool part, each as halftone dots on its own screen
+// angle, the screens a little out of register as real prints are.
+fn riso_screen(px: vec2f, angle: f32, amount: f32) -> f32 {
+    let size = 7.0 * max(1.0, u.res_time.y / 720.0);
+    let q = rot(angle) * px / size;
+    let d = length(fract(q) - 0.5);
+    return smoothstep(0.04, 0.0, d - sqrt(clamp(amount, 0.0, 1.0)) * 0.62);
+}
+
+fn riso(col: vec3f, px: vec2f) -> vec3f {
+    let pink_amount = clamp(col.r * 0.95 + col.b * 0.25 - col.g * 0.15, 0.0, 1.0);
+    let blue_amount = clamp(col.b * 0.85 + col.g * 0.55 - col.r * 0.2, 0.0, 1.0);
+    let pink = riso_screen(px, 0.26, pink_amount);
+    let blue = riso_screen(px + vec2f(2.0, -1.5), 1.31, blue_amount);
+    return vec3f(0.02, 0.02, 0.03) + vec3f(1.0, 0.28, 0.65) * pink + vec3f(0.0, 0.47, 0.85) * blue;
+}
+
+// Iridescent: highlights take the moving rainbow of a soap film or a
+// beetle's shell; shadows stay as they were.
+fn iridescent(col: vec3f, uv: vec2f) -> vec3f {
+    let luma = dot(col, vec3f(0.299, 0.587, 0.114));
+    let phase = luma * 1.6 + (uv.x + uv.y) * 0.45 + u.res_time.z * 0.05 + u.flow.w * 0.02;
+    let film = 0.55 + 0.45 * cos(TAU * (vec3f(0.0, 0.33, 0.67) + phase));
+    let sheen = film * (luma * 1.25 + 0.04);
+    return mix(col, sheen, smoothstep(0.05, 0.6, luma) * 0.85);
 }
 
 // Thermal: brightness becomes heat. Black, deep blue, violet, red, orange,
@@ -434,6 +463,8 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         if (treatment == 1u) { treated = vhs(col, in.uv); }
         if (treatment == 2u) { treated = thermal(col, in.uv); }
         if (treatment == 3u) { treated = film(col, in.uv, in.pos.xy); }
+        if (treatment == 4u) { treated = riso(col, in.pos.xy); }
+        if (treatment == 5u) { treated = iridescent(col, in.uv); }
         col = mix(col, treated, treat_amount);
     }
     let dither = u.post[2].z;
