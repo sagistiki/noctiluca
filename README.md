@@ -48,18 +48,18 @@
   </tr>
 </table>
 
-Six themes (Red room, White corridor, Terminal, Ultraviolet, Amber, Rainbow) built from:
+Nineteen themes, from clean to luxurious to heavy, each a world the director builds looks from: Red room · White corridor · Terminal · Ultraviolet · Amber · Rainbow · Gold room · Marble hall · Noctiluca · Velvet · Liquid chrome · Bauhaus · Acid warehouse · Infrared · Deep space · Arctic · Jungle night · Holographic · Cathedral.
 
 | | |
 |---|---|
-| **Backgrounds** | tunnel · laser grid · liquid · 3D lattice · void |
-| **Patterns** | rings · scope · kaleidoscope · spectrum bars · stripes · frames · radar · square spiral · halftone |
-| **3D objects** | mirror ball · skull · prism · gem · knot · eye · monolith · chain · speakers · crystal · planet · corridor (chrome or glass) |
-| **Atmospheres** | storm with lightning · smoke · fire · moving-head beams · aurora |
-| **Effects** | trails · zoom · kaleido · drift · CRT · prism · floor · VHS · thermal camera · film |
-| **Palettes** | ten: five in colour, five of one colour on black |
+| **Backgrounds** (20) | tunnel · laser grid · liquid · 3D lattice · void · marble · night sea · nebula · mirror room · LED tunnel · concrete · mercury · contours · plasma · glass cells · fractal dive · ink · lasers through haze · dusk sky · silk |
+| **Patterns** (22) | rings · scope · kaleidoscope · spectrum bars · stripes · frames · radar · square spiral · halftone · Lissajous · moiré · ribbon · Truchet · barcode · flower of life · checker warp · strings · mandala · ASCII · string art · pixel sort · orbits |
+| **3D objects** (24) | mirror ball · skull · prism · gem · knot · eye · monolith · chain · speakers · crystal · planet · corridor · classical bust · diamonds · vinyl · jellyfish · rose · liquid metal · pyramid · moon · DNA · butterflies · cube swarm · astronaut, in chrome or glass (the moon in stone), each in its own composition |
+| **Atmospheres** (13) | storm with lightning · smoke · fire · moving-head beams · aurora · snow · rain · bubbles · fireflies · god rays · caustics · lens flares · shooting stars |
+| **Effects** (19) | trails · zoom · kaleido · drift · CRT · prism · floor · VHS · thermal camera · film · chroma · glow · datamosh · feedback · riso · slit scan · heat haze · iridescent · long exposure |
+| **Palettes** (22) | neon · acid · fire · ice · ultraviolet · gold · rose gold · noctiluca · vaporwave · sunset · forest · blood orange · pastel · cyber · bauhaus · infrared · aurora, and five of one colour on black |
 
-On a build the camera pushes in; on the drop everything hits at once.
+One look gives way to the next with a fade, an ink blot spreading, or a flight through the old look on the drop. On a build the camera pushes in, on the drop everything hits at once, and through a breakdown everything slows down.
 
 ## `03` · The app
 
@@ -110,7 +110,7 @@ The receiver lives in [`android/`](android/): plain Android, no libraries, hardw
 
 <p align="center"><img src="docs/media/app-venues.png" alt="The Venues page" width="80%"></p>
 
-Save everything set up for a place (outputs, surfaces, network screens, lights, safety, sync, themes, quality) and load it at the next gig there. The input device stays with the computer. Loading over unsaved changes asks first.
+A venue is a project file: one readable JSON file, `name_nocvenue.json`, with everything set up for a place (outputs, surfaces, network screens, lights, safety, sync, themes, quality). They live in `~/Documents/Noctiluca Venues` or anywhere you save them. **Open…**, **Save** and **Save As…** work as in any Mac app (⌘O, ⌘S, ⇧⌘S), and a venue file dropped on the window opens. The input device stays with the computer. Opening over unsaved changes asks first.
 
 ## `08` · Run it
 
@@ -192,7 +192,7 @@ Rust 2024 · [wgpu](https://wgpu.rs) on Metal · [egui](https://github.com/emilk
 ## `11` · Roadmap
 
 - [ ] **Look editor**: build your own looks inside the app. Make new themes from the backgrounds, patterns, objects, atmospheres, effects and palettes; bring in your own images, 3D models (glTF) and templates; tune how each one reacts to the kick, the build and the drop; save them and hand them to the director.
-- [ ] **A much bigger library**: new themes, backgrounds, patterns, 3D objects, atmospheres, effects and palettes, from clean and minimal to luxurious to heavy FX.
+- [x] **A much bigger library**: new themes, backgrounds, patterns, 3D objects, atmospheres, effects and palettes, from clean and minimal to luxurious to heavy FX.
 - [ ] **MIDI controllers** with Learn: any pad, knob or fader to any action.
 - [ ] **3D stage**: plan the room (walls, screens, projectors, lights) in 3D before the gig.
 - [ ] **Clips and logos**: your own videos, logos and text over the show.
@@ -203,5 +203,10 @@ Rust 2024 · [wgpu](https://wgpu.rs) on Metal · [egui](https://github.com/emilk
 ## License
 
 [MIT](LICENSE). The Inter font is under the SIL Open Font License ([assets/fonts/Inter-LICENSE.txt](assets/fonts/Inter-LICENSE.txt)).
+
+Three 3D models come from free collections; the rest are built in [blender/build_models.py](blender/build_models.py):
+- Skull: *Scattering Skull* by Vladimir Petkovic, [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ScatteringSkull), CC0.
+- Bust: *Marble Bust 01* by Rico Cilliers, [Poly Haven](https://polyhaven.com/a/marble_bust_01), CC0.
+- Astronaut: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Astronaut) (model by DigitalSpace), courtesy of NASA.
 
 <p align="center"><sub>Made for the dance floor.</sub></p>

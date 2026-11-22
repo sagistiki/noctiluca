@@ -95,32 +95,40 @@ struct Args {
     #[arg(long)]
     stats: bool,
 
-    /// Background to start with: 0 tunnel, 1 grid, 2 liquid, 3 shapes, 4 void.
+    /// Background to start with, by number: 0 tunnel … 19 silk (in the order
+    /// of the README's Looks table).
     #[arg(long)]
     bg: Option<usize>,
 
-    /// Pattern to start with: 0 rings, 1 scope, 2 kaleido, 3 bars, 4 stripes, 5 frames,
-    /// 6 radar, 7 spiral, 8 halftone.
+    /// Pattern to start with, by number: 0 rings … 21 orbits (in the order of
+    /// the README's Looks table).
     #[arg(long)]
     pattern: Option<usize>,
 
     /// Palette to start with: 0 neon, 1 acid, 2 fire, 3 ice, 4 ultraviolet,
-    /// 5 red, 6 white, 7 terminal, 8 violet, 9 amber.
+    /// 5 red, 6 white, 7 terminal, 8 violet, 9 amber, 10 gold, 11 rose gold,
+    /// 12 noctiluca, 13 vaporwave, 14 sunset, 15 forest, 16 blood orange,
+    /// 17 pastel, 18 cyber, 19 bauhaus, 20 infrared, 21 aurora.
     #[arg(long)]
     palette: Option<usize>,
 
     /// Effect preset to start with: 0 clean, 1 trails, 2 zoom, 3 kaleido, 4 drift,
-    /// 5 crt, 6 prism, 7 floor, 8 vhs, 9 thermal, 10 film.
+    /// 5 crt, 6 prism, 7 floor, 8 vhs, 9 thermal, 10 film, 11 chroma, 12 glow,
+    /// 13 datamosh, 14 feedback, 15 riso, 16 slit scan, 17 heat haze,
+    /// 18 iridescent, 19 long exposure.
     #[arg(long)]
     post: Option<usize>,
 
     /// 3D object to start with: 0 none, 1 mirror ball, 2 skull, 3 prism, 4 gem,
     /// 5 knot, 6 eye, 7 monolith, 8 chain, 9 speakers, 10 crystal, 11 planet,
-    /// 12 corridor.
+    /// 12 corridor, 13 bust, 14 diamond, 15 vinyl, 16 jellyfish, 17 rose,
+    /// 18 blob, 19 pyramid, 20 moon, 21 dna, 22 butterfly, 23 cubes, 24 astronaut.
     #[arg(long)]
     object: Option<usize>,
 
-    /// Atmosphere to start with: 0 none, 1 storm, 2 smoke, 3 fire, 4 beams, 5 aurora.
+    /// Atmosphere to start with: 0 none, 1 storm, 2 smoke, 3 fire, 4 beams, 5 aurora,
+    /// 6 snow, 7 rain, 8 bubbles, 9 fireflies, 10 rays, 11 caustics, 12 flares,
+    /// 13 meteors.
     #[arg(long)]
     atmos: Option<usize>,
 
