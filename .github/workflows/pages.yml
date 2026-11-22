@@ -4,7 +4,8 @@ name: Pages
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml"]
+    # The site shows the library's size, read from the app's code.
+    paths: ["site/**", "src/director.rs", ".github/workflows/pages.yml", ".github/scripts/library.py"]
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Count the look library from the code
+        run: python3 .github/scripts/library.py src/director.rs > site/library.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

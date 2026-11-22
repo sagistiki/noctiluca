@@ -19,25 +19,50 @@
     reveal.forEach((el) => el.classList.add('in'));
   }
 
-  // ---- counters ----
-  const counters = document.querySelectorAll('[data-count]');
+  // ---- the library: its size, and every look that can be put together ----
+  // library.json is written at each deploy from the app's own lists
+  // (.github/scripts/library.py), so these numbers follow the code. The
+  // numbers in the page are only the fallback.
+  const looks = (n) =>
+    // One of each, or none where there can be none: background × pattern ×
+    // palette × effect (or clean) × object (chrome or glass; the moon is
+    // always stone) or none × atmosphere or none.
+    n.backgrounds * n.patterns * n.palettes * (n.effects + 1) * (2 * n.objects - 1 + 1) * (n.atmospheres + 1);
+  const fmt = (v) => Math.round(v).toLocaleString('en-US');
   const countUp = (el) => {
     const target = +el.dataset.count;
-    if (still) { el.textContent = target; return; }
-    const t0 = performance.now(), dur = 1400;
+    if (still) { el.textContent = fmt(target); return; }
+    const t0 = performance.now(), dur = target > 1000 ? 2200 : 1400;
     const step = (now) => {
       const k = Math.min(1, (now - t0) / dur);
-      el.textContent = Math.round(target * (1 - Math.pow(1 - k, 3)));
+      el.textContent = fmt(target * (1 - Math.pow(1 - k, 3)));
       if (k < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   };
-  if ('IntersectionObserver' in window) {
+  const startCounters = () => {
+    const counters = document.querySelectorAll('[data-count]');
+    if (!('IntersectionObserver' in window)) { counters.forEach((el) => (el.textContent = fmt(+el.dataset.count))); return; }
     const co = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) { countUp(e.target); co.unobserve(e.target); }
     }, { threshold: 0.6 });
     counters.forEach((el) => { el.textContent = '0'; co.observe(el); });
-  }
+  };
+  const fromPage = () => Object.fromEntries([...document.querySelectorAll('[data-key]')].map((el) => [el.dataset.key, +el.dataset.count]));
+  fetch('library.json', { cache: 'no-cache' })
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((lib) => {
+      document.querySelectorAll('[data-key]').forEach((el) => {
+        if (Number.isFinite(lib[el.dataset.key])) el.dataset.count = lib[el.dataset.key];
+      });
+      return lib;
+    })
+    .catch(fromPage)
+    .then((lib) => {
+      const total = document.querySelector('[data-total]');
+      if (total) total.dataset.count = looks({ ...fromPage(), ...lib });
+      startCounters();
+    });
 
   // ---- navigation, progress, parallax: one pass per frame while scrolling ----
   const nav = document.querySelector('.nav');
