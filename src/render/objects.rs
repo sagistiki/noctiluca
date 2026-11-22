@@ -628,23 +628,27 @@ fn bust(u: &Uniforms, appear: f32) -> Vec<Placed> {
 fn diamond_orbit(u: &Uniforms, appear: f32) -> Vec<Placed> {
     let [_, mid, _, beats] = u.flow;
     let a = appear.clamp(0.0, 1.0);
-    let tilt = Quat::from_rotation_x(0.3);
+    let tilt = Quat::from_rotation_x(0.45);
     let mut out = vec![Placed {
-        at: at(Vec3::ZERO, tilt * Quat::from_rotation_y(mid * 0.3), Vec3::splat(0.8 * a * (1.0 + 0.05 * u.beat[1]))),
-        body: 1.0,
+        at: at(Vec3::ZERO, tilt * Quat::from_rotation_y(mid * 0.3), Vec3::splat(0.95 * a * (1.0 + 0.05 * u.beat[1]))),
+        // A little less lit than the rest: its big table mirrors the light
+        // above and would otherwise burn out to a white patch.
+        body: 0.7,
         glow: 1.0,
-        sparkle: 1.0,
+        sparkle: 0.4,
     }];
     for i in 0..8 {
         let k = i as f32;
         let angle = k * TAU / 8.0 + beats * TAU / 64.0;
-        let ring = Quat::from_rotation_x(0.35) * Vec3::new(angle.cos() * 2.1, 0.0, angle.sin() * 2.1);
-        let turn = Quat::from_rotation_y(mid * 0.5 + k) * Quat::from_rotation_x(0.6 + 0.3 * k.sin());
+        let ring = Quat::from_rotation_x(0.3) * Vec3::new(angle.cos() * 2.4, 0.0, angle.sin() * 2.0 - 0.6);
+        // Each turns slowly on its own, mostly showing its side, so its
+        // facets catch the light one at a time instead of all at once.
+        let turn = Quat::from_rotation_y(mid * 0.25 + k) * Quat::from_rotation_x(0.25 + 0.2 * k.sin());
         out.push(Placed {
-            at: at(ring, turn, Vec3::splat(0.28 * a)),
-            body: 1.0,
+            at: at(ring, turn, Vec3::splat(0.38 * a)),
+            body: 0.8,
             glow: 1.0,
-            sparkle: 1.0,
+            sparkle: 0.3,
         });
     }
     out
@@ -741,25 +745,32 @@ fn dna(u: &Uniforms, appear: f32) -> Vec<Placed> {
     }]
 }
 
-/// A swarm of butterflies flying loops through the room, each beating its
-/// wings (the wings fold toward the body and open again) at its own pace.
+/// Butterflies flying loops through the room, seen from above as they
+/// pass: wings open to the camera, heads pointing where they fly, each
+/// beating its wings (they close toward the body and open again) at its
+/// own pace, their glowing edges brighter on the kick.
 fn butterflies(u: &Uniforms, appear: f32) -> Vec<Placed> {
     let t = u.res_time[2];
     let level = u.flow[2];
     let a = appear.clamp(0.0, 1.0);
-    (0..14)
+    (0..10)
         .map(|n| {
             let k = n as f32;
-            let speed = 0.12 + 0.08 * rand(k, 1.0);
-            let phase = rand(k, 2.0) * TAU;
-            let s = level * speed + phase;
-            let pos = Vec3::new(3.2 * (s * 0.9).sin(), 1.2 * (s * 1.3 + k).sin(), -1.5 + 1.8 * (s * 0.7 + 2.0 * k).cos());
-            let ahead = Vec3::new(3.2 * 0.9 * (s * 0.9).cos(), 1.2 * 1.3 * (s * 1.3 + k).cos(), -1.8 * 0.7 * (s * 0.7 + 2.0 * k).sin());
-            let heading = ahead.x.atan2(ahead.z);
-            let flap = ((t * (7.0 + 3.0 * rand(k, 3.0)) + phase).sin().abs()).max(0.15);
-            let size = (0.42 + 0.12 * rand(k, 4.0)) * a;
-            let turn = Quat::from_rotation_y(heading * 0.5) * Quat::from_rotation_x(-0.45);
-            Placed::plain(at(pos, turn, Vec3::new(size * flap, size, size)))
+            let s = level * (0.1 + 0.06 * rand(k, 1.0)) + rand(k, 2.0) * TAU;
+            let (fx, fy) = (0.7 + 0.3 * rand(k, 5.0), 1.1 + 0.4 * rand(k, 6.0));
+            let pos = Vec3::new(3.0 * (s * fx).sin(), 1.3 * (s * fy + k).sin(), -1.2 + 1.4 * rand(k, 7.0));
+            // Which way it is going on the screen.
+            let (vx, vy) = (3.0 * fx * (s * fx).cos(), 1.3 * fy * (s * fy + k).cos());
+            let roll = vy.atan2(vx) - PI / 2.0;
+            let flap = (t * (6.0 + 3.0 * rand(k, 3.0)) + rand(k, 2.0) * TAU).sin().abs().max(0.18);
+            let size = (0.32 + 0.12 * rand(k, 4.0)) * a;
+            let turn = Quat::from_rotation_z(roll) * Quat::from_rotation_x(PI / 2.0 - 0.35);
+            Placed {
+                at: at(pos, turn, Vec3::new(size * flap, size, size)),
+                body: 1.0,
+                glow: 0.8 + 0.7 * u.beat[1],
+                sparkle: 0.0,
+            }
         })
         .collect()
 }

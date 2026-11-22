@@ -604,18 +604,20 @@ def build_diamond():
     points = []
     for k in range(8):  # table
         a = (k + 0.5) * math.tau / 8
-        points.append((0.55 * math.cos(a), 0.55 * math.sin(a), 0.16))
+        points.append((0.55 * math.cos(a), 0.55 * math.sin(a), 0.32))
     for k in range(8):  # bezel points, between the table's corners
         a = k * math.tau / 8
-        points.append((0.80 * math.cos(a), 0.80 * math.sin(a), 0.085))
+        points.append((0.80 * math.cos(a), 0.80 * math.sin(a), 0.17))
     for k in range(16):  # girdle, top and bottom edge
         a = (k + 0.5) * math.tau / 16
         points.append((math.cos(a), math.sin(a), 0.01))
         points.append((math.cos(a), math.sin(a), -0.01))
     for k in range(8):  # pavilion mains
         a = (k + 0.5) * math.tau / 8
-        points.append((0.42 * math.cos(a), 0.42 * math.sin(a), -0.27))
-    points.append((0, 0, -0.43))  # culet
+        points.append((0.42 * math.cos(a), 0.42 * math.sin(a), -0.5))
+    points.append((0, 0, -0.86))  # culet
+    # (Heights against a girdle of radius 1: the crown 16% and the pavilion
+    # 43% of the diameter, the table 55% of it, as a round brilliant is cut.)
     mesh = bpy.data.meshes.new("diamond")
     bm = bmesh.new()
     for p in points:
@@ -826,25 +828,71 @@ def build_dna():
     return [helix, lights]
 
 
+def wing(outline, name, thickness=0.012):
+    """A flat wing from its outline (x, y points), given a little thickness."""
+    mesh = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    verts = [bm.verts.new((x, y, 0.0)) for x, y in outline]
+    bm.faces.new(verts)
+    bmesh.ops.triangulate(bm, faces=list(bm.faces))
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new(name, mesh)
+    scene().collection.objects.link(obj)
+    modifier(obj, "SOLIDIFY", thickness=thickness, offset=0.0)
+    return bake(obj)
+
+
+def wing_outline(points, samples=14):
+    """A smooth closed outline through a few control points (Catmull-Rom)."""
+    out = []
+    n = len(points)
+    for i in range(n):
+        p0, p1, p2, p3 = points[i - 1], points[i], points[(i + 1) % n], points[(i + 2) % n]
+        for k in range(samples):
+            t = k / samples
+            t2, t3 = t * t, t * t * t
+            out.append(tuple(
+                0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)
+                for j in range(2)
+            ))
+    return out
+
+
 def build_butterfly():
-    """A butterfly with its wings open: fore and hind wings on each side,
-    gently bent, and a slim body."""
-    wings = []
+    """A butterfly seen from above, wings open: a forewing with a pointed
+    tip and a rounded hindwing on each side, a slim body, two antennae with
+    clubbed tips, and the wings' edges glowing in the palette's colour.
+    The body runs along Y (head at +Y), the wings lie flat in X-Y."""
+    fore = wing_outline([(0.05, 0.05), (0.35, 0.42), (0.95, 0.72), (1.05, 0.55), (0.85, 0.15), (0.4, -0.02)])
+    hind = wing_outline([(0.05, -0.02), (0.45, -0.05), (0.8, -0.35), (0.7, -0.75), (0.35, -0.8), (0.08, -0.4)])
+    parts, glow = [], []
     for side in (-1, 1):
-        for (w, h, lift, back) in [(1.0, 0.75, 0.25, 0.1), (0.7, 0.6, -0.35, -0.05)]:
-            wing = sphere(0.5, segments=24, rings=12)
-            wing.scale = (w, h, 0.02)
-            wing.location = (side * (w * 0.5 + 0.06), back, lift)
-            wing.rotation_euler = (0, math.radians(-12 * side), math.radians(18 * side * (1 if lift > 0 else -1)))
-            bake(wing)
-            wings.append(wing)
-    body = sphere(0.06, segments=16, rings=12)
-    body.scale = (1.0, 1.0, 8.0)
+        for outline, name in ((fore, "fore"), (hind, "hind")):
+            pts = [(side * x, y) for x, y in outline]
+            if side < 0:
+                pts.reverse()
+            w = wing(pts, f"{name}{side}")
+            # Wings rise a little from the body, the way they rest in flight.
+            w.rotation_euler = (0, math.radians(-10 * side), 0)
+            bake(w)
+            parts.append(w)
+            edge = tube([(x, y, abs(x) * math.tan(math.radians(10)) + 0.012) for x, y in pts[::2]], 0.012, f"{name}{side}_edge", cyclic=True, resolution=3)
+            glow.append(edge)
+    body = sphere(0.05, segments=16, rings=12)
+    body.scale = (1.0, 9.0, 1.0)
+    body.location = (0, -0.1, 0.02)
     bake(body)
-    fly = join(wings + [body], "butterfly")
+    head = sphere(0.06, loc=(0, 0.38, 0.02), segments=16, rings=8)
+    antennae = []
+    for side in (-1, 1):
+        antennae.append(tube([(0, 0.42, 0.03), (side * 0.12, 0.7, 0.06), (side * 0.2, 0.95, 0.08)], 0.008, f"antenna{side}", cyclic=False, resolution=3))
+        antennae.append(sphere(0.025, loc=(side * 0.2, 0.95, 0.08), segments=10, rings=6))
+    fly = join(parts + [body, head] + antennae, "butterfly")
+    edges = join(glow, "butterfly_edges_glow")
     shade(fly, flat=False)
-    normalise([fly])
-    return [fly]
+    normalise([fly, edges])
+    return [fly, edges]
 
 
 def build_cubes():
